@@ -33,7 +33,6 @@ CLIENTPAYFOURN_MYPARAM1Tooltip = My param 1 tooltip
 CLIENTPAYFOURN_MYPARAM2=My param 2
 CLIENTPAYFOURN_MYPARAM2Tooltip=My param 2 tooltip
 
-
 #
 # About page
 #
@@ -41,14 +40,19 @@ About = About
 ClientPayFournAbout = About ClientPayFourn
 ClientPayFournAboutPage = ClientPayFourn about page
 
-#
-# Sample page
-#
-ClientPayFournArea = Home ClientPayFourn
-MyPageName = My page name
 
-#
-# Sample widget
-#
-MyWidget = My widget
-MyWidgetDescription = My widget description
+ClientPayFournButton = Paiement direct Fournisseur
+ClientPayFournArea = Zone de paiement direct Fournisseur
+ClientPayFournFournisseur = Fournisseur
+ClientPayFournFournisseurOptional = (optionnel)
+ClientPayFournFacture = Facture
+ClientPayFournButtonLink = Associer
+
+CLIENTPAYFOURN_CLIENT_ACCOUNTING = Comptabilité client
+CLIENTPAYFOURN_FOURN_ACCOUNTING = Comptabilité fournisseur
+
+ClientPayFournFactureClientCompta = Facture client comptabilité
+ClientPayFournFactureFournCompta = Facture fournisseur comptabilité
+
+ClientPayFournFactureClientLinked = Facture client liée
+ClientPayFournFactureFournLinked = Facture fournisseur liée

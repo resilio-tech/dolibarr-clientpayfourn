@@ -56,51 +56,106 @@ if (!$res) {
 	die("Include of main fails");
 }
 
+require_once DOL_DOCUMENT_ROOT.'/core/class/html.formaccounting.class.php';
+require_once DOL_DOCUMENT_ROOT.'/accountancy/class/accountingaccount.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.formfile.class.php';
 
 // Load translation files required by the page
 $langs->loadLangs(array("clientpayfourn@clientpayfourn"));
 
 $action = GETPOST('action', 'aZ09');
-
+$facture_id = GETPOST('id', 'int');
+$facturefourn_id = GETPOST('facturefourn_id', 'int');
+$accounting_fourn = GETPOST('accounting_fourn', 'int');
+$accounting_client = GETPOST('accounting_client', 'int');
+$date = GETPOST('date', 'int');
+$date_day = GETPOST('dateday', 'int');
+$date_month = GETPOST('datemonth', 'int');
+$date_year = GETPOST('dateyear', 'int');
 $max = 5;
 $now = dol_now();
 
 // Security check - Protection if external user
 $socid = GETPOST('socid', 'int');
-if (isset($user->socid) && $user->socid > 0) {
-	$action = '';
-	$socid = $user->socid;
+
+if ($action && $action == 'link') {
+	if (!$facture_id || !$facturefourn_id) {
+		if (!$facture_id) {
+			setEventMessage("Facture client non renseignée", 'errors');
+		}
+		if (!$facturefourn_id) {
+			setEventMessage("Facture fournisseur non renseignée", 'errors');
+		}
+	} else if ($facture_id && $facturefourn_id) {
+		function createLink($facture_id, $facturefourn_id)
+		{
+			global $db, $accounting_fourn, $accounting_client, $date;
+			$sql = "INSERT INTO " . MAIN_DB_PREFIX . "clientpayfourn_linkclientpayfourn (fk_facture_client, fk_facture_fourn, datec)";
+			$sql .= " VALUES (" . (int)$facture_id . ", " . (int)$facturefourn_id . ", '".date_format(date_create($date), 'Y-m-d')."')";
+			$resql = $db->query($sql);
+			if ($resql) {
+				setEventMessage("Link created", 'mesgs');
+
+				$sql_fourn = "UPDATE " . MAIN_DB_PREFIX . "facture_fourn SET fk_statut = 2 WHERE rowid = " . (int)$facturefourn_id;
+				$resql_fourn = $db->query($sql_fourn);
+				if ($resql_fourn) {
+					setEventMessage("Facture fournisseur changé", 'mesgs');
+				} else {
+					setEventMessage("Erreur lors du changement facture fournisseur", 'errors');
+				}
+
+				$sql_facture = "UPDATE " . MAIN_DB_PREFIX . "facture SET fk_statut = 2 WHERE rowid = " . (int)$facture_id;
+				$resql_facture = $db->query($sql_facture);
+				if ($resql_facture) {
+					setEventMessage("Facture client changé", 'mesgs');
+				} else {
+					setEventMessage("Erreur lors du changement facture client", 'errors');
+				}
+
+				$sql_accountingfourn = " UPDATE ".MAIN_DB_PREFIX."facture_fourn_det";
+				$sql_accountingfourn .= " SET fk_code_ventilation = ".((int) $accounting_fourn);
+				$sql_accountingfourn .= " WHERE rowid = ".((int) $facturefourn_id);
+
+				$resql_accountingfourn = $db->query($sql_accountingfourn);
+				if ($resql_accountingfourn) {
+					setEventMessage("Compte comptable fournisseur changé", 'mesgs');
+				} else {
+					setEventMessage("Erreur lors du changement compte comptable fournisseur", 'errors');
+				}
+
+				$sql_accountingclient = " UPDATE ".MAIN_DB_PREFIX."facturedet";
+				$sql_accountingclient .= " SET fk_code_ventilation = ".((int) $accounting_client);
+				$sql_accountingclient .= " WHERE rowid = ".((int) $facture_id);
+
+				$resql_accountingclient = $db->query($sql_accountingclient);
+				if ($resql_accountingclient) {
+					setEventMessage("Compte comptable client changé", 'mesgs');
+				} else {
+					setEventMessage("Erreur lors du changement compte comptable client", 'errors');
+				}
+
+				header("Location: /fourn/facture/card.php?facid=" . $facturefourn_id);
+			} else {
+				setEventMessage("Erreur lors de la création du lien", 'errors');
+			}
+		}
+
+		$sql = "SELECT fk_facture_client, fk_facture_fourn FROM " . MAIN_DB_PREFIX . "clientpayfourn_linkclientpayfourn";
+		$sql .= " WHERE fk_facture_client = " . (int)$facture_id . " AND fk_facture_fourn = " . (int)$facturefourn_id;
+		$resql = $db->query($sql);
+		if ($resql) {
+			if ($db->num_rows($resql) > 0) {
+				setEventMessage("Lien déjà existant", 'warning');
+			} else {
+				createLink($facture_id, $facturefourn_id);
+			}
+		}
+	}
 }
-
-// Security check (enable the most restrictive one)
-//if ($user->socid > 0) accessforbidden();
-//if ($user->socid > 0) $socid = $user->socid;
-//if (!isModEnabled('clientpayfourn')) {
-//	accessforbidden('Module not enabled');
-//}
-//if (! $user->hasRight('clientpayfourn', 'myobject', 'read')) {
-//	accessforbidden();
-//}
-//restrictedArea($user, 'clientpayfourn', 0, 'clientpayfourn_myobject', 'myobject', '', 'rowid');
-//if (empty($user->admin)) {
-//	accessforbidden('Must be admin');
-//}
-
-
-/*
- * Actions
- */
-
-// None
-
-
-/*
- * View
- */
 
 $form = new Form($db);
 $formfile = new FormFile($db);
+$form_accounting = new FormAccounting($db);
 
 llxHeader("", $langs->trans("ClientPayFournArea"), '', '', 0, 0, '', '', '', 'mod-clientpayfourn page-index');
 
@@ -108,136 +163,104 @@ print load_fiche_titre($langs->trans("ClientPayFournArea"), '', 'clientpayfourn.
 
 print '<div class="fichecenter"><div class="fichethirdleft">';
 
+print '<form name="form" action="'.$_SERVER["PHP_SELF"].'?id='.$facture_id.'" method="post">';
+print '<table>';
 
-/* BEGIN MODULEBUILDER DRAFT MYOBJECT
-// Draft MyObject
-if (isModEnabled('clientpayfourn') && $user->hasRight('clientpayfourn', 'read')) {
-	$langs->load("orders");
+print '<tr>';
+print '<td>';
+print '<b>'.$langs->trans("ClientPayFournFournisseur").'</b> '.$langs->trans("ClientPayFournFournisseurOptional");
+print '</td>';
+print '<td>';
+print $form->select_company($socid, 'socid', '', 1);
+print '</td>';
+print '</tr>';
 
-	$sql = "SELECT c.rowid, c.ref, c.ref_client, c.total_ht, c.tva as total_tva, c.total_ttc, s.rowid as socid, s.nom as name, s.client, s.canvas";
-	$sql.= ", s.code_client";
-	$sql.= " FROM ".MAIN_DB_PREFIX."commande as c";
-	$sql.= ", ".MAIN_DB_PREFIX."societe as s";
-	$sql.= " WHERE c.fk_soc = s.rowid";
-	$sql.= " AND c.fk_statut = 0";
-	$sql.= " AND c.entity IN (".getEntity('commande').")";
-	if ($socid)	$sql.= " AND c.fk_soc = ".((int) $socid);
+print '<tr>';
+print '<td>';
+print '<b>'.$langs->trans("ClientPayFournFacture").'</b>';
+print '</td>';
+print '<td>';
 
-	$resql = $db->query($sql);
-	if ($resql)
+$sql = "SELECT f.rowid, f.ref, f.datef, f.fk_soc as socid, f.multicurrency_code as code, f.multicurrency_total_ttc as amount FROM ".MAIN_DB_PREFIX."facture_fourn as f";
+$sql.= " WHERE f.entity IN (".getEntity('facture_fourn').")";
+if ($socid)	$sql.= " AND f.fk_soc = ".((int) $socid);
+$sql.= " ORDER BY f.datef DESC";
+$resql = $db->query($sql);
+$list = array();
+$list_select = array();
+if ($resql)
+{
+	while ($obj = $db->fetch_object($resql))
 	{
-		$total = 0;
-		$num = $db->num_rows($resql);
-
-		print '<table class="noborder centpercent">';
-		print '<tr class="liste_titre">';
-		print '<th colspan="3">'.$langs->trans("DraftMyObjects").($num?'<span class="badge marginleftonlyshort">'.$num.'</span>':'').'</th></tr>';
-
-		$var = true;
-		if ($num > 0)
-		{
-			$i = 0;
-			while ($i < $num)
-			{
-
-				$obj = $db->fetch_object($resql);
-				print '<tr class="oddeven"><td class="nowrap">';
-
-				$myobjectstatic->id=$obj->rowid;
-				$myobjectstatic->ref=$obj->ref;
-				$myobjectstatic->ref_client=$obj->ref_client;
-				$myobjectstatic->total_ht = $obj->total_ht;
-				$myobjectstatic->total_tva = $obj->total_tva;
-				$myobjectstatic->total_ttc = $obj->total_ttc;
-
-				print $myobjectstatic->getNomUrl(1);
-				print '</td>';
-				print '<td class="nowrap">';
-				print '</td>';
-				print '<td class="right" class="nowrap">'.price($obj->total_ttc).'</td></tr>';
-				$i++;
-				$total += $obj->total_ttc;
-			}
-			if ($total>0)
-			{
-
-				print '<tr class="liste_total"><td>'.$langs->trans("Total").'</td><td colspan="2" class="right">'.price($total)."</td></tr>";
-			}
-		}
-		else
-		{
-
-			print '<tr class="oddeven"><td colspan="3" class="opacitymedium">'.$langs->trans("NoOrder").'</td></tr>';
-		}
-		print "</table><br>";
-
-		$db->free($resql);
+		$list_select[$obj->rowid] = $obj->ref.' - '.dol_print_date($db->jdate($obj->datef), 'day') . ' - ' . price($obj->amount, 0, $conf->global->MAIN_MONNAIE) . ' ' . $obj->code;
 	}
-	else
-	{
-		dol_print_error($db);
-	}
+	$db->free($resql);
 }
-END MODULEBUILDER DRAFT MYOBJECT */
 
+print $form->selectarray('facturefourn_id', $list_select, $facture_id, 1);
+
+print '</td>';
+print '</tr>';
+
+print '<tr>';
+print '<td>';
+print '<b>'.$langs->trans("ClientPayFournFactureClientCompta").'</b>';
+print '</td>';
+print '<td>';
+$client_code = isset($conf->global->CLIENTPAYFOURN_CLIENT_ACCOUNTING) ? $conf->global->CLIENTPAYFOURN_CLIENT_ACCOUNTING : 0;
+print $form_accounting->select_account($client_code, 'accounting_client', 1);
+print '</td>';
+print '</tr>';
+
+print '<tr>';
+print '<td>';
+print '<b>'.$langs->trans("ClientPayFournFactureFournCompta").'</b>';
+print '</td>';
+print '<td>';
+$fourn_code = isset($conf->global->CLIENTPAYFOURN_FOURN_ACCOUNTING) ? $conf->global->CLIENTPAYFOURN_FOURN_ACCOUNTING : 0;
+print $form_accounting->select_account($fourn_code, 'accounting_fourn', 1);
+print '</td>';
+print '</tr>';
+
+print '<tr>';
+print '<td>';
+print '<b>'.$langs->trans("Date").'</b>';
+print '</td>';
+print '<td>';
+print $form->selectDate($now, 'date');
+print '</td>';
+print '</tr>';
+
+print '<tr>';
+print '<td>';
+print '</td>';
+print '<td>';
+// Button send
+print '<input type="submit" class="button" name="action" value="'.$langs->trans("ClientPayFournButtonLink").'">';
+print '</td>';
+print '</tr>';
+
+print '</table>';
+
+print '<input type="hidden" name="token" value="'.newToken().'">';
+print '<input type="hidden" name="action" value="link">';
+print '<input type="hidden" name="id" value="'.$facture_id.'">';
+
+print '</form>';
+
+print '<script type="text/javascript">';
+print '$(document).ready(function() {';
+print '	$("#socid").change(function() {';
+print '		window.location.href = "/custom/clientpayfourn/clientpayfournindex.php?id=' . $facture_id . '&socid=" + $("#socid").val();';
+print '	});';
+print '});';
+print '</script>';
 
 print '</div><div class="fichetwothirdright">';
 
 
 $NBMAX = getDolGlobalInt('MAIN_SIZE_SHORTLIST_LIMIT');
 $max = getDolGlobalInt('MAIN_SIZE_SHORTLIST_LIMIT');
-
-/* BEGIN MODULEBUILDER LASTMODIFIED MYOBJECT
-// Last modified myobject
-if (isModEnabled('clientpayfourn') && $user->hasRight('clientpayfourn', 'read')) {
-	$sql = "SELECT s.rowid, s.ref, s.label, s.date_creation, s.tms";
-	$sql.= " FROM ".MAIN_DB_PREFIX."clientpayfourn_myobject as s";
-	$sql.= " WHERE s.entity IN (".getEntity($myobjectstatic->element).")";
-	//if ($socid)	$sql.= " AND s.rowid = $socid";
-	$sql .= " ORDER BY s.tms DESC";
-	$sql .= $db->plimit($max, 0);
-
-	$resql = $db->query($sql);
-	if ($resql)
-	{
-		$num = $db->num_rows($resql);
-		$i = 0;
-
-		print '<table class="noborder centpercent">';
-		print '<tr class="liste_titre">';
-		print '<th colspan="2">';
-		print $langs->trans("BoxTitleLatestModifiedMyObjects", $max);
-		print '</th>';
-		print '<th class="right">'.$langs->trans("DateModificationShort").'</th>';
-		print '</tr>';
-		if ($num)
-		{
-			while ($i < $num)
-			{
-				$objp = $db->fetch_object($resql);
-
-				$myobjectstatic->id=$objp->rowid;
-				$myobjectstatic->ref=$objp->ref;
-				$myobjectstatic->label=$objp->label;
-				$myobjectstatic->status = $objp->status;
-
-				print '<tr class="oddeven">';
-				print '<td class="nowrap">'.$myobjectstatic->getNomUrl(1).'</td>';
-				print '<td class="right nowrap">';
-				print "</td>";
-				print '<td class="right nowrap">'.dol_print_date($db->jdate($objp->tms), 'day')."</td>";
-				print '</tr>';
-				$i++;
-			}
-
-			$db->free($resql);
-		} else {
-			print '<tr class="oddeven"><td colspan="3" class="opacitymedium">'.$langs->trans("None").'</td></tr>';
-		}
-		print "</table><br>";
-	}
-}
-*/
 
 print '</div></div>';
 

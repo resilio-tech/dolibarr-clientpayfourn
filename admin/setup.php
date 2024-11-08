@@ -91,72 +91,39 @@ if (!class_exists('FormSetup')) {
 }
 $formSetup = new FormSetup($db);
 
-
 // Enter here all parameters in your setup page
 
-// Setup conf for selection of an URL
-$item = $formSetup->newItem('CLIENTPAYFOURN_MYPARAM1');
-$item->fieldOverride = (empty($_SERVER['HTTPS']) ? 'http://' : 'https://') . $_SERVER['HTTP_HOST'];
-$item->cssClass = 'minwidth500';
-
-// Setup conf for selection of a simple string input
-$item = $formSetup->newItem('CLIENTPAYFOURN_MYPARAM2');
-$item->defaultFieldValue = 'default value';
-
-// Setup conf for selection of a simple textarea input but we replace the text of field title
-$item = $formSetup->newItem('CLIENTPAYFOURN_MYPARAM3');
-$item->nameText = $item->getNameText().' more html text ';
-
-// Setup conf for a selection of a thirdparty
-$item = $formSetup->newItem('CLIENTPAYFOURN_MYPARAM4');
-$item->setAsThirdpartyType();
-
-// Setup conf for a selection of a boolean
-$formSetup->newItem('CLIENTPAYFOURN_MYPARAM5')->setAsYesNo();
-
-// Setup conf for a selection of an email template of type thirdparty
-$formSetup->newItem('CLIENTPAYFOURN_MYPARAM6')->setAsEmailTemplate('thirdparty');
-
-// Setup conf for a selection of a secured key
-//$formSetup->newItem('CLIENTPAYFOURN_MYPARAM7')->setAsSecureKey();
-
-// Setup conf for a selection of a product
-$formSetup->newItem('CLIENTPAYFOURN_MYPARAM8')->setAsProduct();
-
-// Add a title for a new section
-$formSetup->newItem('NewSection')->setAsTitle();
-
-$TField = array(
-	'test01' => $langs->trans('test01'),
-	'test02' => $langs->trans('test02'),
-	'test03' => $langs->trans('test03'),
-	'test04' => $langs->trans('test04'),
-	'test05' => $langs->trans('test05'),
-	'test06' => $langs->trans('test06'),
+$list_accounting = array(
+	0 => ""
 );
+$sql = "SELECT DISTINCT aa.account_number, aa.label, aa.labelshort, aa.rowid, aa.fk_pcg_version";
+$sql .= " FROM ".$db->prefix()."accounting_account as aa";
+$sql .= " INNER JOIN ".$db->prefix()."accounting_system as asy ON aa.fk_pcg_version = asy.pcg_version";
+$sql .= " AND asy.rowid = ".((int) getDolGlobalInt('CHARTOFACCOUNTS'));
+$sql .= " ORDER BY aa.account_number";
 
-// Setup conf for a simple combo list
-$formSetup->newItem('CLIENTPAYFOURN_MYPARAM9')->setAsSelect($TField);
+$resql = $db->query($sql);
 
-// Setup conf for a multiselect combo list
-$item = $formSetup->newItem('CLIENTPAYFOURN_MYPARAM10');
-$item->setAsMultiSelect($TField);
-$item->helpText = $langs->transnoentities('CLIENTPAYFOURN_MYPARAM10');
-
-
-
-// Setup conf CLIENTPAYFOURN_MYPARAM10
-$item = $formSetup->newItem('CLIENTPAYFOURN_MYPARAM10');
-$item->setAsColor();
-$item->defaultFieldValue = '#FF0000';
-$item->nameText = $item->getNameText().' more html text ';
-$item->fieldInputOverride = '';
-$item->helpText = $langs->transnoentities('AnHelpMessage');
-//$item->fieldValue = '';
-//$item->fieldAttr = array() ; // fields attribute only for compatible fields like input text
-//$item->fieldOverride = false; // set this var to override field output will override $fieldInputOverride and $fieldOutputOverride too
-//$item->fieldInputOverride = false; // set this var to override field input
-//$item->fieldOutputOverride = false; // set this var to override field output
+if (!$resql) {
+	$this->error = "Error ".$db->lasterror();
+} else {
+	$trunclength = getDolGlobalInt('ACCOUNTING_LENGTH_DESCRIPTION_ACCOUNT', 50);
+	while ($obj = $db->fetch_object($resql)) {
+		if (empty($obj->labelshort)) {
+			$labeltoshow = $obj->label;
+		} else {
+			$labeltoshow = $obj->labelshort;
+		}
+		$label = $obj->account_number.' - '.$labeltoshow;
+		$label = dol_trunc($label, $trunclength);
+		$list_accounting[$obj->rowid] = $label;
+	}
+}
+// Setup conf for selection of an URL
+$item = $formSetup->newItem('CLIENTPAYFOURN_CLIENT_ACCOUNTING');
+$item->setAsSelect($list_accounting);
+$item = $formSetup->newItem('CLIENTPAYFOURN_FOURN_ACCOUNTING');
+$item->setAsSelect($list_accounting);
 
 
 $setupnotempty += count($formSetup->items);

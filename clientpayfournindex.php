@@ -96,7 +96,7 @@ if ($action && $action == 'link') {
 			if ($resql) {
 				setEventMessage("Link created", 'mesgs');
 
-				$sql_fourn = "UPDATE " . MAIN_DB_PREFIX . "facture_fourn SET fk_statut = 2 WHERE rowid = " . (int)$facturefourn_id;
+				$sql_fourn = "UPDATE " . MAIN_DB_PREFIX . "facture_fourn SET fk_statut = 2, paye = 1 WHERE rowid = " . (int)$facturefourn_id;
 				$resql_fourn = $db->query($sql_fourn);
 				if ($resql_fourn) {
 					setEventMessage("Facture fournisseur changé", 'mesgs');
@@ -104,7 +104,7 @@ if ($action && $action == 'link') {
 					setEventMessage("Erreur lors du changement facture fournisseur", 'errors');
 				}
 
-				$sql_facture = "UPDATE " . MAIN_DB_PREFIX . "facture SET fk_statut = 2 WHERE rowid = " . (int)$facture_id;
+				$sql_facture = "UPDATE " . MAIN_DB_PREFIX . "facture SET fk_statut = 2, paye = 1 WHERE rowid = " . (int)$facture_id;
 				$resql_facture = $db->query($sql_facture);
 				if ($resql_facture) {
 					setEventMessage("Facture client changé", 'mesgs');

@@ -44,9 +44,11 @@ ClientPayFournAboutPage = ClientPayFourn about page
 ClientPayFournButton = Paiement direct Fournisseur
 ClientPayFournArea = Zone de paiement direct Fournisseur
 ClientPayFournFournisseur = Fournisseur
-ClientPayFournFournisseurOptional = (optionnel)
+ClientPayFournFournisseurOptional = (optionnel, aide à la recherche)
 ClientPayFournFacture = Facture
 ClientPayFournButtonLink = Associer
+ClientPayFournValidate = Valider
+ClientPayFournCompta = Entrée en Comptabilité
 
 CLIENTPAYFOURN_CLIENT_ACCOUNTING = Comptabilité client
 CLIENTPAYFOURN_FOURN_ACCOUNTING = Comptabilité fournisseur

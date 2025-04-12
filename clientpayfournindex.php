@@ -71,6 +71,7 @@ $facture_id = GETPOST('id', 'int');
 $facturefourn_id = GETPOST('facturefourn_id', 'int');
 $accounting_fourn = GETPOST('accounting_fourn', 'int');
 $accounting_client = GETPOST('accounting_client', 'int');
+$amount = GETPOST('amount', 'int');
 $date = GETPOST('date', 'int');
 $date_day = GETPOST('dateday', 'int');
 $date_month = GETPOST('datemonth', 'int');
@@ -100,10 +101,10 @@ if (!empty($facturefourn_id)) {
 $factureClient = new Facture($db);
 $factureClient->fetch($facture_id);
 $client_soc_id = 0;
-$mt = 0;
+$amountClient = 0;
 if ($factureClient && !empty($factureClient->id)) {
 	$client_soc_id = $factureClient->socid;
-	$mt = $factureClient->total_ttc;
+	$amountClient = $factureClient->total_ttc;
 }
 $thirdparty_buyer = new Societe($db);
 if (!$client_soc_id) {
@@ -123,14 +124,14 @@ if ($action && $action == 'link') {
 	} else if ($facture_id && $facturefourn_id) {
 		function createLink($facture_id, $facturefourn_id)
 		{
-			global $db, $now, $mt, $facturefourn, $date;
+			global $db, $now, $amount, $facturefourn, $date;
 			$sql = "INSERT INTO " . MAIN_DB_PREFIX . "clientpayfourn_linkclientpayfourn (fk_facture_client, fk_facture_fourn, datec)";
 			$sql .= " VALUES (" . (int)$facture_id . ", " . (int)$facturefourn_id . ", '".date_format(date_create($date), 'Y-m-d')."')";
 			$resql = $db->query($sql);
 			if ($resql) {
 				setEventMessage("Link created", 'mesgs');
 
-				$paye = $mt == $facturefourn->total_ttc ? 1 : 0;
+				$paye = $amount == $facturefourn->total_ttc ? 1 : 0;
 				$status = $paye ? 2 : 1;
 				$sql_fourn = "UPDATE " . MAIN_DB_PREFIX . "facture_fourn SET fk_statut = ".$status.", paye = ".$paye." WHERE rowid = " . (int)$facturefourn_id;
 				$resql_fourn = $db->query($sql_fourn);
@@ -193,7 +194,7 @@ if ($action && $action == 'link') {
 				$ref = $paiementfourn->getNextNumRef($fourn_soc_id);
 				$sql_paimentfourn = "INSERT INTO " . MAIN_DB_PREFIX . "paiementfourn";
 				$sql_paimentfourn .= " (ref, entity, tms, datec, datep, amount, multicurrency_amount, fk_user_author, fk_user_modif, fk_paiement, num_paiement, statut, fk_bank, note)";
-				$sql_paimentfourn .= " VALUES ('" . $ref . "', " . $conf->entity . ", '" . $db->idate($now) . "', '" . $db->idate($now) . "', '" . $db->idate($now) . "', " . $mt . ", " . $factureClient->multicurrency_total_ttc . ", " . $user->id . ", " . $user->id . ", 0, '', 0, 0, 'Payé par Client ". $factureClient->ref ."')";
+				$sql_paimentfourn .= " VALUES ('" . $ref . "', " . $conf->entity . ", '" . $db->idate($now) . "', '" . $db->idate($now) . "', '" . $db->idate($now) . "', " . $amount . ", " . $factureClient->multicurrency_total_ttc . ", " . $user->id . ", " . $user->id . ", 0, '', 0, 0, 'Payé par Client ". $factureClient->ref ."')";
 
 				$resql_paimentfourn = $db->query($sql_paimentfourn);
 				if ($resql_paimentfourn) {
@@ -202,7 +203,7 @@ if ($action && $action == 'link') {
 
 					$sql_payment = "INSERT INTO " . MAIN_DB_PREFIX . "paiementfourn_facturefourn";
 					$sql_payment .= " (fk_paiementfourn, fk_facturefourn, amount, multicurrency_code, multicurrency_tx, multicurrency_amount)";
-					$sql_payment .= " VALUES (".$paimentfourn.", ".$facturefourn_id.", ".$mt.", '".$factureClient->multicurrency_code."', $factureClient->multicurrency_tx, $factureClient->multicurrency_total_ttc)";
+					$sql_payment .= " VALUES (".$paimentfourn.", ".$facturefourn_id.", ".$amount.", '".$factureClient->multicurrency_code."', $factureClient->multicurrency_tx, $factureClient->multicurrency_total_ttc)";
 
 					$resql_payment = $db->query($sql_payment);
 					if ($resql_payment) {
@@ -288,8 +289,8 @@ if ($action && $action == 'compta') {
 				return $bookkeeping->create($user);
 			}
 
-			$compta_1 = createBookKeeping($facturefourn_id, $account_sell, $thirdparty_seller, $accounting_fourn, -$mt, 1);
-			$compta_2 = createBookKeeping($facture_id, $account_buy, $thirdparty_buyer, $accounting_client, $mt, 2);
+			$compta_1 = createBookKeeping($facturefourn_id, $account_sell, $thirdparty_seller, $accounting_fourn, $amount, 1);
+			$compta_2 = createBookKeeping($facture_id, $account_buy, $thirdparty_buyer, $accounting_client, -$amount, 2);
 			if ($compta_1 != 0 || $compta_2 != 0) {
 				$db->rollback();
 				setEventMessage("Erreur lors de la création d'écritures comptable", 'errors');
@@ -343,8 +344,8 @@ if ($action && $action == 'link') {
 		print '<td>' . (($mt < 0) ? -$mt . "" : 0) . '</td>';
 		print '</tr>';
 	}
-	printCompta($account_sell->label, $thirdparty_seller->name, $mt);
-	printCompta($account_buy->label, $thirdparty_buyer->name, -$mt);
+	printCompta($account_sell->label, $thirdparty_seller->name, $amount);
+	printCompta($account_buy->label, $thirdparty_buyer->name, -$amount);
 
 	print '</table>';
 
@@ -415,6 +416,16 @@ if ($action && $action == 'link') {
 	print '<td>';
 	$fourn_code = isset($conf->global->CLIENTPAYFOURN_FOURN_ACCOUNTING) ? $conf->global->CLIENTPAYFOURN_FOURN_ACCOUNTING : 0;
 	print $form_accounting->select_account($fourn_code, 'accounting_fourn', 1);
+	print '</td>';
+	print '</tr>';
+
+	$mnt = empty($amountClient) ? $amount : $amountClient;
+	print '<tr>';
+	print '<td>';
+	print '<b>' . $langs->trans("Amount") . '</b>';
+	print '</td>';
+	print '<td>';
+	print '<input type="number" value="'.$mnt.'" id="amount" name="amount" />'
 	print '</td>';
 	print '</tr>';
 

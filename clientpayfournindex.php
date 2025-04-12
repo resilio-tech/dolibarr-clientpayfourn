@@ -231,9 +231,9 @@ require_once DOL_DOCUMENT_ROOT.'/accountancy/class/accountingaccount.class.php';
 require_once DOL_DOCUMENT_ROOT . '/accountancy/class/bookkeeping.class.php';
 
 $account_sell = new AccountingAccount($db);
-$account_sell->fetch(getDolGlobalString('CLIENTPAYFOURN_FOURN_ACCOUNTING'));
+$account_sell->fetch(empty($accounting_fourn) ? getDolGlobalString('CLIENTPAYFOURN_FOURN_ACCOUNTING') : $accounting_fourn);
 $account_buy = new AccountingAccount($db);
-$account_buy->fetch(getDolGlobalString('CLIENTPAYFOURN_CLIENT_ACCOUNTING'));
+$account_buy->fetch(empty($accounting_client) ? getDolGlobalString('CLIENTPAYFOURN_CLIENT_ACCOUNTING') : $accounting_client);
 
 if ($action && $action == 'compta') {
 	if (!$facture_id || !$facturefourn_id) {
@@ -288,8 +288,8 @@ if ($action && $action == 'compta') {
 				return $bookkeeping->create($user);
 			}
 
-			$compta_1 = createBookKeeping($facturefourn_id, $account_sell, $thirdparty_seller, $accounting_fourn, $mt, 1);
-			$compta_2 = createBookKeeping($facture_id, $account_buy, $thirdparty_buyer, $accounting_client, -$mt, 2);
+			$compta_1 = createBookKeeping($facturefourn_id, $account_sell, $thirdparty_seller, $accounting_fourn, -$mt, 1);
+			$compta_2 = createBookKeeping($facture_id, $account_buy, $thirdparty_buyer, $accounting_client, $mt, 2);
 			if ($compta_1 != 0 || $compta_2 != 0) {
 				$db->rollback();
 				setEventMessage("Erreur lors de la création d'écritures comptable", 'errors');
@@ -432,7 +432,7 @@ if ($action && $action == 'link') {
 	print '</td>';
 	print '<td>';
 	// Button send
-	print '<input type="submit" class="button" name="action" value="' . $langs->trans("ClientPayFournButtonLink") . '">';
+	print '<input type="submit" class="button" name="submit" value="' . $langs->trans("ClientPayFournButtonLink") . '">';
 	print '</td>';
 	print '</tr>';
 

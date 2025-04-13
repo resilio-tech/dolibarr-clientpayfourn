@@ -425,7 +425,7 @@ if ($action && $action == 'link') {
 	print '<b>' . $langs->trans("Amount") . '</b>';
 	print '</td>';
 	print '<td>';
-	print '<input type="number" value="'.$mnt.'" id="amount" name="amount" />'
+	print '<input type="number" value="'.$mnt.'" id="amount" name="amount" />';
 	print '</td>';
 	print '</tr>';
 

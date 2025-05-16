@@ -71,7 +71,7 @@ $facture_id = GETPOST('id', 'int');
 $facturefourn_id = GETPOST('facturefourn_id', 'int');
 $accounting_fourn = GETPOST('accounting_fourn', 'int');
 $accounting_client = GETPOST('accounting_client', 'int');
-$amount = GETPOST('amount', 'int');
+$amount = GETPOST('amount', 'float');
 $date = GETPOST('date', 'int');
 $date_day = GETPOST('dateday', 'int');
 $date_month = GETPOST('datemonth', 'int');
@@ -82,12 +82,9 @@ $now = dol_now();
 // Security check - Protection if external user
 $socid = GETPOST('socid', 'int');
 
-
 $fourn_soc_id = 0;
 $facturefourn = new FactureFournisseur($db);
-var_dump(array("facturefourn_id", $facturefourn_id));
 $facturefourn->fetch($facturefourn_id);
-var_dump(array("facturefourn id", $facturefourn->id));
 $thirdparty_seller = new Societe($db);
 if (!empty($facturefourn_id)) {
 	if (empty($facturefourn->id)) {
@@ -112,6 +109,15 @@ if (!$client_soc_id) {
 } else {
 	$thirdparty_buyer->fetch($client_soc_id);
 }
+
+var_dump(
+	array(
+		"facturefourn_id" => $facturefourn_id,
+		"facture_id" => $facture_id,
+		"action" => $action,
+	)
+);
+
 
 if ($action && $action == 'link') {
 	if (!$facture_id || !$facturefourn_id) {
@@ -252,7 +258,7 @@ if ($action && $action == 'compta') {
 			var_dump(array("client_soc_id", $client_soc_id));
 			$action = 'link';
 		} else {
-			function createBookKeeping($f_id, $account, $thirdparty, $accounting, $mt, $j)
+			function createBookKeeping($f_id, $counter_part, $account, $thirdparty, $accounting, $mt, $j)
 			{
 				global $db, $now, $journal, $journal_label, $langs, $user, $date, $conf, $action;
 				$accountingjournalstatic = new AccountingJournal($db);
@@ -276,7 +282,7 @@ if ($action && $action == 'compta') {
 				$bookkeeping->numero_compte = $accounting;
 				$bookkeeping->label_compte = $account->label;
 
-	//			$bookkeeping_seller->label_operation = dol_trunc($companystatic->name, 16) . ' - ' . $invoicestatic->ref . ' - ' . $langs->trans("RetainedWarranty");
+				$bookkeeping_seller->label_operation = $langs->trans("DebtCompensation") . ' - ' . $counter_part->ref ;
 				$bookkeeping->montant = $mt;
 				$bookkeeping->sens = ($mt >= 0) ? 'D' : 'C';
 				$bookkeeping->debit = ($mt >= 0) ? $mt : 0;
@@ -289,8 +295,8 @@ if ($action && $action == 'compta') {
 				return $bookkeeping->create($user);
 			}
 
-			$compta_1 = createBookKeeping($facturefourn_id, $account_sell, $thirdparty_seller, $accounting_fourn, $amount, 1);
-			$compta_2 = createBookKeeping($facture_id, $account_buy, $thirdparty_buyer, $accounting_client, -$amount, 2);
+			$compta_1 = createBookKeeping($facturefourn_id, $factureClient, $account_sell, $thirdparty_seller, $accounting_fourn, $amount, 1);
+			$compta_2 = createBookKeeping($facture_id, $facturefourn, $account_buy, $thirdparty_buyer, $accounting_client, -$amount, 2);
 			if ($compta_1 != 0 || $compta_2 != 0) {
 				$db->rollback();
 				setEventMessage("Erreur lors de la création d'écritures comptable", 'errors');
@@ -322,30 +328,38 @@ if ($action && $action == 'link') {
 
 	print '<h2>' . $langs->trans("ClientPayFournCompta") . '</h2>';
 
-	print '<table style="width: 100%;">';
+	print '<table style="text-align: left ;width: 100%;">';
 	print '<tr>';
 	print '<th>'. $langs->trans("Date"). '</th>';
 	print '<th>'. $langs->trans("Ref"). '</th>';
-	print '<th>'. $langs->trans("Libelle"). '</th>';
 	print '<th>'. $langs->trans("Account"). '</th>';
+	print '<th>'. $langs->trans("Subledger"). '</th>';
+	print '<th>'. $langs->trans("Libelle"). '</th>';
 	print '<th>'. $langs->trans("Débit"). '</th>';
 	print '<th>'. $langs->trans("Crédit"). '</th>';
 	print '</tr>';
+	/**var_dump(
+		array(
+			'account_sell' => $account_sell,
+			'thirdparty_seller' => $thirdparty_seller,
+		)
+	);*/
 
-	function printCompta($label, $soc, $mt)
+	function printCompta($account, $fac, $counter_part, $subledger, $mt)
 	{
-		global $date, $db;
+		global $date, $db, $langs;
 		print '<tr>';
 		print '<td>' . date_format(date_create($date), 'Y-m-d') . '</td>';
-		print '<td>SPEC</td>';
-		print '<td>' . $label . '</td>';
-		print '<td>' . $soc . '</td>';
+		print '<td> '. $fac->getNomUrl(1) . ' </td>';
+		print '<td>' . $account->ref . '</td>';
+		print '<td>' . $subledger . '</td>';
+		print '<td>' . $langs->trans("DebtCompensation") . ' - ' . $counter_part->ref . '</td>';
 		print '<td>' . (($mt >= 0) ? $mt . "" : 0) . '</td>';
 		print '<td>' . (($mt < 0) ? -$mt . "" : 0) . '</td>';
 		print '</tr>';
 	}
-	printCompta($account_sell->label, $thirdparty_seller->name, $amount);
-	printCompta($account_buy->label, $thirdparty_buyer->name, -$amount);
+	printCompta($account_sell, $factureClient, $facturefourn, $thirdparty_buyer->code_compta, $amount);
+	printCompta($account_buy, $facturefourn, $factureClient, $thirdparty_seller->code_compta_fournisseur, -$amount);
 
 	print '</table>';
 
@@ -390,11 +404,17 @@ if ($action && $action == 'link') {
 	if ($resql) {
 		while ($obj = $db->fetch_object($resql)) {
 			$list_select[$obj->rowid] = $obj->ref . ' - ' . dol_print_date($db->jdate($obj->datef), 'day') . ' - ' . price($obj->amount, 0, $conf->global->MAIN_MONNAIE) . ' ' . $obj->code;
+			$supplier_inv_data[$obj->rowid] = $obj->amount;
 		}
 		$db->free($resql);
 	}
 
 	print $form->selectarray('facturefourn_id', $list_select, $facture_id, 1);
+
+	print "<script>
+		// Pass the PHP JSON to a JavaScript variable
+		var jsArray =" . json_encode($supplier_inv_data) . "
+		</script>";
 
 	print '</td>';
 	print '</tr>';
@@ -425,7 +445,7 @@ if ($action && $action == 'link') {
 	print '<b>' . $langs->trans("Amount") . '</b>';
 	print '</td>';
 	print '<td>';
-	print '<input type="number" value="'.$mnt.'" id="amount" name="amount" />';
+	print '<input type="number" value="'.$mnt.'" id="amount" name="amount" step="0.01"/>';
 	print '</td>';
 	print '</tr>';
 
@@ -459,6 +479,14 @@ if ($action && $action == 'link') {
 	print '$(document).ready(function() {';
 	print '	$("#socid").change(function() {';
 	print '		window.location.href = "/custom/clientpayfourn/clientpayfournindex.php?id=' . $facture_id . '&socid=" + $("#socid").val();';
+	print '	});';
+	// Manage dynamic field amount update
+	print '	console.log("Doneee");';
+	print ' $("#facturefourn_id").change(function() {';
+	print '		console.log("RUUUn");';
+	print '		var selectedIndex = $(this).val();';
+    print '		var amountValue = Number(jsArray[selectedIndex]);';
+    print '		$("#amount").val(isNaN(amountValue) ? 0 : amountValue);';
 	print '	});';
 	print '});';
 	print '</script>';

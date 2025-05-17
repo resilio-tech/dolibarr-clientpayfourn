@@ -56,6 +56,8 @@ if (!$res) {
 	die("Include of main fails");
 }
 
+require_once DOL_DOCUMENT_ROOT.'/custom/clientpayfourn/lib/clientpayfourn.lib.php';
+
 require_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.facture.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.formaccounting.class.php';
 require_once DOL_DOCUMENT_ROOT.'/accountancy/class/accountingaccount.class.php';
@@ -147,91 +149,6 @@ if ($action && $action == 'save') {
 			setEventMessage($langs->trans("CPF_CustomerUndefined"), 'errors');
 		}
 	} else if ($facture_id && $supplier_invoice_id) {
-		/** FUNCTIONS **/
-		/*	Create a link between a Customer invoice and a sSupplier invoice when compensating them
-		*
-		*	facture_id 			int 	Foreign key to Facture (Customer Invoice) Object
-		*	supplier_invoice_id 	int 	Foreign key to SupplierInvoice Object
-		*
-		*	return 0 if KO, int > 0 (id of inserted object) if inserted successfully
-		*/
-		function createLink($facture_id, $supplier_invoice_id)
-		{
-			global $db, $now, $amount, $supplier_invoice, $date;
-			$sql = "INSERT INTO " . MAIN_DB_PREFIX . "clientpayfourn_linkclientpayfourn (fk_facture_client, fk_facture_fourn, datec)";
-			$sql .= " VALUES (" . (int)$facture_id . ", " . (int)$supplier_invoice_id . ", '".date_format(date_create($date), 'Y-m-d')."')";
-			$resql = $db->query($sql);
-			var_dump($resql);
-			if ($resql) {
-				setEventMessage("Link created", 'mesgs');
-				$db->commit();
-				// Get rowid to return it
-				$sql = "SELECT fk_facture_client, fk_facture_fourn FROM " . MAIN_DB_PREFIX . "clientpayfourn_linkclientpayfourn";
-				$sql .= " WHERE fk_facture_client = " . (int)$facture_id . " AND fk_facture_fourn = " . (int)$supplier_invoice_id;
-				$resql = $db->query($sql);
-				$id_inserted = $db->fetch_object($resql);
-				return $id_inserted;
-			} else {
-				$db->rollback();
-				return 0;
-			}
-		}
-
-		function createBookKeeping($invoice, $counter_part, $account, $thirdparty, $mt, $ref, $fk_doc)
-		{
-			global $db, $now, $langs, $user, $date, $conf, $action, $JOURNAL_CODE;
-			$accountingjournalstatic = new AccountingJournal($db);
-			$accountingjournalstatic->fetch($JOURNAL_CODE);
-
-			$bookkeeping = new BookKeeping($db);
-			$bookkeeping->doc_date = date_create($date)->getTimestamp();
-			$bookkeeping->date_lim_reglement = date_create($date)->getTimestamp();
-			$bookkeeping->doc_ref = $ref;
-			$bookkeeping->date_creation = $now;
-			$bookkeeping->doc_type = 'special_clientpayfourn';//'customer_invoice';
-			$bookkeeping->fk_doc = $fk_doc;
-			$bookkeeping->fk_docdet = 0;
-			$bookkeeping->thirdparty_code = $mt > 0 ? $thirdparty->code_fournisseur : $thirdparty->code_client;
-
-			$bookkeeping->subledger_account = $mt > 0 ? $thirdparty->code_compta_fournisseur : $thirdparty->code_compta;
-			$bookkeeping->subledger_label = $thirdparty->name;
-
-			$bookkeeping->numero_compte = $account->ref;
-			$bookkeeping->label_compte = $account->label;
-
-			$bookkeeping->label_operation = $langs->trans("DebtCompensation") . ' - ' . $counter_part->ref ;
-			$bookkeeping->montant = $mt;
-			$bookkeeping->sens = ($mt >= 0) ? 'D' : 'C';
-			$bookkeeping->debit = ($mt >= 0) ? $mt : 0;
-			$bookkeeping->credit = ($mt < 0) ? -$mt : 0;
-			$bookkeeping->code_journal = $accountingjournalstatic->code;
-			$bookkeeping->journal_label = $langs->transnoentities($accountingjournalstatic->label);
-			$bookkeeping->fk_user_author = $user->id;
-			$bookkeeping->entity = $conf->entity;
-
-			return $bookkeeping->create($user);
-		}
-
-		function createDiscount($invoice, $invoice_supp, $thirdparty, $amount) 
-		{
-			global $db, $user;
-			require_once DOL_DOCUMENT_ROOT.'/core/class/discount.class.php';
-
-			// Create the discount
-			$discount = new DiscountAbsolute($db);
-			$discount->description = 'DebtCompensation - '.$invoice_supp->ref;
-			$discount->fk_soc = $thirdparty->id;
-			$discount->fk_facture_source = $invoice->id;
-			$discount->fk_invoice_supplier_source = $invoice_supp->id;
-			$discount->amount_ht = $discount->amount_ttc = $amount;
-			$discount->amount_tva = 0;
-			$discount->tva_tx = 0;
-			$discount->vat_src_code = '';
-			$id_result = $discount->create($user);
-		
-			return $id_result;
-		}
-
 		/* MANAGE LINK */
 		$sql = "SELECT fk_facture_client, fk_facture_fourn FROM " . MAIN_DB_PREFIX . "clientpayfourn_linkclientpayfourn";
 		$sql .= " WHERE fk_facture_client = " . (int)$facture_id . " AND fk_facture_fourn = " . (int)$supplier_invoice_id;
@@ -294,8 +211,8 @@ if ($action && $action == 'save') {
 
 		/* MANAGE Bookeeping */
 		$ref = $client_invoice->ref . ' ' . $supplier_invoice->ref;
-		$bk_1 = createBookKeeping($supplier_invoice, $client_invoice, $account_supplier, $thirdparty_supplier, (float) $amount, $ref, $link_id);
-		$bk_2 = createBookKeeping($client_invoice, $supplier_invoice, $account_client, $thirdparty_customer, - (float) $amount, $ref, $link_id);
+		$bk_1 = createBookKeeping($supplier_invoice, $client_invoice, $account_supplier, $thirdparty_supplier, (float) $amount, $ref, $link_id, $JOURNAL_CODE);
+		$bk_2 = createBookKeeping($client_invoice, $supplier_invoice, $account_client, $thirdparty_customer, - (float) $amount, $ref, $link_id, $JOURNAL_CODE);
 		if ($bk_1 != 0 || $bk_2 != 0) {
 			setEventMessage($langs->trans("CPF_ErrorBookkeepingCreation"), 'errors');
 			var_dump(array("Bookkeeping Supplier", $bk_1));

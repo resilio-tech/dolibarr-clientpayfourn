@@ -68,7 +68,7 @@ $langs->loadLangs(array("clientpayfourn@clientpayfourn"));
 
 $action = GETPOST('action', 'aZ09');
 $facture_id = GETPOST('id', 'int');
-$facturefourn_id = GETPOST('facturefourn_id', 'int');
+$supplier_invoice_id = GETPOST('supplier_invoice_id', 'int');
 $accounting_fourn = GETPOST('accounting_fourn', 'int');
 $accounting_client = GETPOST('accounting_client', 'int');
 $amount = GETPOST('amount', 'float');
@@ -83,41 +83,40 @@ $now = dol_now();
 $socid = GETPOST('socid', 'int');
 
 $fourn_soc_id = 0;
-$facturefourn = new FactureFournisseur($db);
-$facturefourn->fetch($facturefourn_id);
+$supplier_invoice = new FactureFournisseur($db);
+$supplier_invoice->fetch($supplier_invoice_id);
 $thirdparty_supplier = new Societe($db);
-if (!empty($facturefourn_id)) {
-	if (empty($facturefourn->id)) {
-		setEventMessage("Société fournisseur non renseignée", 'errors');
+if (!empty($supplier_invoice_id)) {
+	if (empty($supplier_invoice->id)) {
+		setEventMessage($langs->trans("CPF_SupplierInvoiceUndefined"), 'errors');
 	} else {
-		$fourn_soc_id = $facturefourn->socid;
+		$fourn_soc_id = $supplier_invoice->socid;
 		$thirdparty_supplier->fetch($fourn_soc_id);
 	}
 }
 
-$factureClient = new Facture($db);
-$factureClient->fetch($facture_id);
+$client_invoice = new Facture($db);
+$client_invoice->fetch($facture_id);
 $client_soc_id = 0;
 $amountClient = 0;
-if ($factureClient && !empty($factureClient->id)) {
-	$client_soc_id = $factureClient->socid;
-	$amountClient = $factureClient->total_ttc;
+if ($client_invoice && !empty($client_invoice->id)) {
+	$client_soc_id = $client_invoice->socid;
+	$amountClient = $client_invoice->total_ttc;
 }
 $thirdparty_customer = new Societe($db);
 if (!$client_soc_id) {
-	setEventMessage("Société client non renseignée", 'errors');
+	setEventMessage($langs->trans("CPF_CustomerUndefined"), 'errors');
 } else {
 	$thirdparty_customer->fetch($client_soc_id);
 }
 
 var_dump(
 	array(
-		"facturefourn_id" => $facturefourn_id,
+		"supplier_invoice_id" => $supplier_invoice_id,
 		"facture_id" => $facture_id,
 		"action" => $action,
 	)
 );
-
 
 require_once DOL_DOCUMENT_ROOT.'/accountancy/class/accountingjournal.class.php';
 require_once DOL_DOCUMENT_ROOT.'/accountancy/class/accountingaccount.class.php';
@@ -129,36 +128,52 @@ $account_client = new AccountingAccount($db);
 $account_client->fetch(empty($accounting_client) ? getDolGlobalString('CLIENTPAYFOURN_CLIENT_ACCOUNTING') : $accounting_client);
 $JOURNAL_CODE = getDolGlobalString('CLIENTPAYFOURN_JOURNAL');
 if (empty($JOURNAL_CODE)) {
-	setEventMessage("Misconfigured module: Check config for ClientPayFourn", 'errors'); 
+	setEventMessage("CPF_Misconfigured", 'errors'); 
 	header("Location: /custom/clientpayfourn/admin/setup.php");
 }
 
 if ($action && $action == 'save') {
-	if (!$facture_id || !$facturefourn_id || !$fourn_soc_id || !$client_soc_id) {
+	if (!$facture_id || !$supplier_invoice_id || !$fourn_soc_id || !$client_soc_id) {
 		if (!$facture_id) {
-			setEventMessage("Facture client non renseignée", 'errors');
+			setEventMessage($langs->trans("CPF_CustomerInvoiceUndefined"), 'errors');
 		}
-		if (!$facturefourn_id) {
-			setEventMessage("Facture fournisseur non renseignée", 'errors');
+		if (!$supplier_invoice_id) {
+			setEventMessage($langs->trans("CPF_SupplierInvoiceUndefined"), 'errors');
 		}
 		if (!$fourn_soc_id) {
-			setEventMessage("Fournisseur non renseignée", 'errors');
+			setEventMessage($langs->trans("CPF_SupplierUndefined"), 'errors');
 		}
 		if (!$client_soc_id) {
-			setEventMessage("Client non renseigné", 'errors');
+			setEventMessage($langs->trans("CPF_CustomerUndefined"), 'errors');
 		}
-	} else if ($facture_id && $facturefourn_id) {
+	} else if ($facture_id && $supplier_invoice_id) {
 		/** FUNCTIONS **/
-		function createLink($facture_id, $facturefourn_id)
+		/*	Create a link between a Customer invoice and a sSupplier invoice when compensating them
+		*
+		*	facture_id 			int 	Foreign key to Facture (Customer Invoice) Object
+		*	supplier_invoice_id 	int 	Foreign key to SupplierInvoice Object
+		*
+		*	return 0 if KO, int > 0 (id of inserted object) if inserted successfully
+		*/
+		function createLink($facture_id, $supplier_invoice_id)
 		{
-			global $db, $now, $amount, $facturefourn, $date;
+			global $db, $now, $amount, $supplier_invoice, $date;
 			$sql = "INSERT INTO " . MAIN_DB_PREFIX . "clientpayfourn_linkclientpayfourn (fk_facture_client, fk_facture_fourn, datec)";
-			$sql .= " VALUES (" . (int)$facture_id . ", " . (int)$facturefourn_id . ", '".date_format(date_create($date), 'Y-m-d')."')";
+			$sql .= " VALUES (" . (int)$facture_id . ", " . (int)$supplier_invoice_id . ", '".date_format(date_create($date), 'Y-m-d')."')";
 			$resql = $db->query($sql);
+			var_dump($resql);
 			if ($resql) {
 				setEventMessage("Link created", 'mesgs');
+				$db->commit();
+				// Get rowid to return it
+				$sql = "SELECT fk_facture_client, fk_facture_fourn FROM " . MAIN_DB_PREFIX . "clientpayfourn_linkclientpayfourn";
+				$sql .= " WHERE fk_facture_client = " . (int)$facture_id . " AND fk_facture_fourn = " . (int)$supplier_invoice_id;
+				$resql = $db->query($sql);
+				$id_inserted = $db->fetch_object($resql);
+				return $id_inserted;
 			} else {
-				setEventMessage("Erreur lors de la création du lien", 'errors');
+				$db->rollback();
+				return 0;
 			}
 		}
 
@@ -173,7 +188,7 @@ if ($action && $action == 'save') {
 			$bookkeeping->date_lim_reglement = date_create($date)->getTimestamp();
 			$bookkeeping->doc_ref = $ref;
 			$bookkeeping->date_creation = $now;
-			$bookkeeping->doc_type = 'customer_invoice';//'special_clientpayfourn';
+			$bookkeeping->doc_type = 'special_clientpayfourn';//'customer_invoice';
 			$bookkeeping->fk_doc = $fk_doc;
 			$bookkeeping->fk_docdet = 0;
 			$bookkeeping->thirdparty_code = $mt > 0 ? $thirdparty->code_fournisseur : $thirdparty->code_client;
@@ -213,78 +228,85 @@ if ($action && $action == 'save') {
 			$discount->tva_tx = 0;
 			$discount->vat_src_code = '';
 			$id_result = $discount->create($user);
-
-			if ($id_result < 0) {
-				$db->rollback();
-				setEventMessage("Discount failed to be created, payment not recorded", 'errors');
-				var_dump(
-					array(
-						'sql' => $db->lasterror(), 
-						'discount' => $discount,
-					)
-				);
-				$action = 'validate';
-			} else {
-				$db->commit();
-				setEventMessage("Discount created", 'mesgs');
-			}
-
-			// Mark the supplier invoice as paid
-			$invoice_supp->setPaid($user);
-			
+		
 			return $id_result;
 		}
 
 		/* MANAGE LINK */
 		$sql = "SELECT fk_facture_client, fk_facture_fourn FROM " . MAIN_DB_PREFIX . "clientpayfourn_linkclientpayfourn";
-		$sql .= " WHERE fk_facture_client = " . (int)$facture_id . " AND fk_facture_fourn = " . (int)$facturefourn_id;
+		$sql .= " WHERE fk_facture_client = " . (int)$facture_id . " AND fk_facture_fourn = " . (int)$supplier_invoice_id;
 		$resql = $db->query($sql);
+		var_dump($resql);
 		if ($resql) {
 			if ($db->num_rows($resql) > 0) {
-				setEventMessage("Lien déjà existant", 'warning');
-				$action = '';
+				setEventMessage($langs->trans("CPF_ExistingLink"), 'errors');
+				header("Location: /compta/facture/card.php?facid=" . $facture_id);
 			} else {
-				createLink($facture_id, $facturefourn_id);
+				$link_id = createLink($facture_id, $supplier_invoice_id);
+				if ($link_id == 0) {
+					setEventMessage($langs->trans("CPF_LinkCreationError"), 'errors');
+					header("Location: /fourn/facture/card.php?facid=" . $supplier_invoice_id);
+				}
 			}
 		} else {
+			setEventMessage($langs->trans("CPF_AntiDuplicateCheckFailed"), 'warning');
 			var_dump($db->lasterror());
 		}
 
 		/* Manage Payments */
 		// Create discount from the supplier invoice
-		$id_discount = createDiscount($factureClient, $facturefourn, $thirdparty_customer, $amount);
+		$id_discount = createDiscount($client_invoice, $supplier_invoice, $thirdparty_customer, $amount);
+		if ($id_discount < 0) {
+			$db->rollback();
+			setEventMessage($langs->trans("CPF_DiscountCreationFailed"), 'errors');
+			var_dump(
+				array(
+					'sql' => $db->lasterror(), 
+					'discount' => $discount,
+				)
+			);
+			$action = 'validate';
+		} else {
+			$db->commit();
+			setEventMessage($langs->trans("CPF_DiscountCreated"), 'mesgs');
+		}
+
+		// Mark the supplier invoice as paid
+		$supplier_invoice->setPaid($user);
 
 		// Use the credit to reduce remain to pay
 		$discount = new DiscountAbsolute($db);
 		$discount->fetch($id_discount);
-		$result = $discount->link_to_invoice(0, $factureClient->id);
+		$result = $discount->link_to_invoice(0, $client_invoice->id);
 
 		if ($result < 0) {
 			setEventMessages($discount->error, $discount->errors, 'errors');
 			$db->rollback();
 		} else {
 			$db->commit();
-			setEventMessage("Paiement créé", 'mesgs');
+			setEventMessage($langs->trans("CPF_PaymentRecorded"), 'mesgs');
 		}
 
-		$newremaintopay = $factureClient->getRemainToPay(0);
+		$newremaintopay = $client_invoice->getRemainToPay(0);
 		if ($newremaintopay == 0) {
-			$factureClient->setPaid($user);
+			$client_invoice->setPaid($user);
 		}
 
 		/* MANAGE Bookeeping */
-		$compta_1 = createBookKeeping($facturefourn, $factureClient, $account_supplier, $thirdparty_supplier, (float) $amount, $factureClient->ref, $factureClient->id);
-		$compta_2 = createBookKeeping($factureClient, $facturefourn, $account_client, $thirdparty_customer, - (float) $amount, $factureClient->ref, $factureClient->id);
-		if ($compta_1 != 0 || $compta_2 != 0) {
-			setEventMessage("Erreur lors de la création d'écritures comptable", 'errors');
-			var_dump(array("compta_1", $compta_1));
-			var_dump(array("compta_2", $compta_2));
+		$ref = $client_invoice->ref . ' ' . $supplier_invoice->ref;
+		$bk_1 = createBookKeeping($supplier_invoice, $client_invoice, $account_supplier, $thirdparty_supplier, (float) $amount, $ref, $link_id);
+		$bk_2 = createBookKeeping($client_invoice, $supplier_invoice, $account_client, $thirdparty_customer, - (float) $amount, $ref, $link_id);
+		if ($bk_1 != 0 || $bk_2 != 0) {
+			setEventMessage($langs->trans("CPF_ErrorBookkeepingCreation"), 'errors');
+			var_dump(array("Bookkeeping Supplier", $bk_1));
+			var_dump(array("Bookkeeping Customer", $bk_2));
 			var_dump($db->lasterror());
 			$db->rollback();
 			$action = 'validate';
 		} else {
-			setEventMessage("Ecritures comptable créées", 'mesgs');
-			header("Location: /fourn/facture/card.php?facid=" . $facturefourn_id);
+			setEventMessage("CPF_BookkeepingCreated", 'mesgs');
+			$db->commit();
+			//header("Location: /fourn/facture/card.php?facid=" . $supplier_invoice_id);
 		}
 		
 	}
@@ -329,15 +351,15 @@ if ($action && $action == 'validate') {
 		print '<td>' . (($mt < 0) ? -$mt . "" : 0) . '</td>';
 		print '</tr>';
 	}
-	printCompta($account_supplier, $factureClient, $facturefourn, $thirdparty_customer->code_compta, (float) $amount);
-	printCompta($account_client, $facturefourn, $factureClient, $thirdparty_supplier->code_compta_fournisseur, - (float)$amount);
+	printCompta($account_supplier, $client_invoice, $supplier_invoice, $thirdparty_customer->code_compta, (float) $amount);
+	printCompta($account_client, $supplier_invoice, $client_invoice, $thirdparty_supplier->code_compta_fournisseur, - (float)$amount);
 
 	print '</table>';
 
 	print '<input type="submit" class="button" name="submit" value="' . $langs->trans("ClientPayFournValidate") . '">';
 
 	print '<input type="hidden" name="amount" value="' . $amount . '">';
-	print '<input type="hidden" name="facturefourn_id" value="' . $facturefourn_id . '">';
+	print '<input type="hidden" name="supplier_invoice_id" value="' . $supplier_invoice_id . '">';
 	print '<input type="hidden" name="facture_id" value="' . $facture_id . '">';
 	print '<input type="hidden" name="accounting_fourn" value="' . $accounting_fourn . '">';
 	print '<input type="hidden" name="accounting_client" value="' . $accounting_client . '">';
@@ -381,7 +403,7 @@ if ($action && $action == 'validate') {
 		$db->free($resql);
 	}
 
-	print $form->selectarray('facturefourn_id', $list_select, $facture_id, 1);
+	print $form->selectarray('supplier_invoice_id', $list_select, $facture_id, 1);
 
 	print "<script>
 		// Pass the PHP JSON to a JavaScript variable
@@ -454,7 +476,7 @@ if ($action && $action == 'validate') {
 	print '	});';
 	// Manage dynamic field amount update
 	print '	console.log("Doneee");';
-	print ' $("#facturefourn_id").change(function() {';
+	print ' $("#supplier_invoice_id").change(function() {';
 	print '		console.log("RUUUn");';
 	print '		var selectedIndex = $(this).val();';
     print '		var amountValue = Number(jsArray[selectedIndex]);';

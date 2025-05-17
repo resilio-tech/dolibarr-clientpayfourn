@@ -85,13 +85,13 @@ $socid = GETPOST('socid', 'int');
 $fourn_soc_id = 0;
 $facturefourn = new FactureFournisseur($db);
 $facturefourn->fetch($facturefourn_id);
-$thirdparty_seller = new Societe($db);
+$thirdparty_supplier = new Societe($db);
 if (!empty($facturefourn_id)) {
 	if (empty($facturefourn->id)) {
 		setEventMessage("Société fournisseur non renseignée", 'errors');
 	} else {
 		$fourn_soc_id = $facturefourn->socid;
-		$thirdparty_seller->fetch($fourn_soc_id);
+		$thirdparty_supplier->fetch($fourn_soc_id);
 	}
 }
 
@@ -103,11 +103,11 @@ if ($factureClient && !empty($factureClient->id)) {
 	$client_soc_id = $factureClient->socid;
 	$amountClient = $factureClient->total_ttc;
 }
-$thirdparty_buyer = new Societe($db);
+$thirdparty_customer = new Societe($db);
 if (!$client_soc_id) {
 	setEventMessage("Société client non renseignée", 'errors');
 } else {
-	$thirdparty_buyer->fetch($client_soc_id);
+	$thirdparty_customer->fetch($client_soc_id);
 }
 
 var_dump(
@@ -204,10 +204,10 @@ if ($action && $action == 'save') {
 
 			// Create the discount
 			$discount = new DiscountAbsolute($db);
-			$discount->description = 'DebtCompensation';
+			$discount->description = 'DebtCompensation - '.$invoice_supp->ref;
 			$discount->fk_soc = $thirdparty->id;
-			//$discount->fk_facture_source = $invoice->id;
-			$discount->fk_invoice_supplier = $invoice_supp->id;
+			$discount->fk_facture_source = $invoice->id;
+			$discount->fk_invoice_supplier_source = $invoice_supp->id;
 			$discount->amount_ht = $discount->amount_ttc = $amount;
 			$discount->amount_tva = 0;
 			$discount->tva_tx = 0;
@@ -252,7 +252,7 @@ if ($action && $action == 'save') {
 
 		/* Manage Payments */
 		// Create discount from the supplier invoice
-		$id_discount = createDiscount($factureClient, $facturefourn, $thirdparty_buyer, $amount);
+		$id_discount = createDiscount($factureClient, $facturefourn, $thirdparty_customer, $amount);
 
 		// Use the credit to reduce remain to pay
 		$discount = new DiscountAbsolute($db);
@@ -273,8 +273,8 @@ if ($action && $action == 'save') {
 		}
 
 		/* MANAGE Bookeeping */
-		$compta_1 = createBookKeeping($facturefourn, $factureClient, $account_client, $thirdparty_seller, (float) $amount, $factureClient->ref, $factureClient->id);
-		$compta_2 = createBookKeeping($factureClient, $facturefourn, $account_supplier, $thirdparty_buyer, - (float) $amount, $factureClient->ref, $factureClient->id);
+		$compta_1 = createBookKeeping($facturefourn, $factureClient, $account_supplier, $thirdparty_supplier, (float) $amount, $factureClient->ref, $factureClient->id);
+		$compta_2 = createBookKeeping($factureClient, $facturefourn, $account_client, $thirdparty_customer, - (float) $amount, $factureClient->ref, $factureClient->id);
 		if ($compta_1 != 0 || $compta_2 != 0) {
 			setEventMessage("Erreur lors de la création d'écritures comptable", 'errors');
 			var_dump(array("compta_1", $compta_1));
@@ -286,31 +286,6 @@ if ($action && $action == 'save') {
 			setEventMessage("Ecritures comptable créées", 'mesgs');
 			header("Location: /fourn/facture/card.php?facid=" . $facturefourn_id);
 		}
-
-		// Re-generate Client invoice PDF
-		/*if (empty($error) && !getDolGlobalString('MAIN_DISABLE_PDF_AUTOUPDATE')) {
-			$outputlangs = $langs;
-			$newlang = '';
-			if (getDolGlobalInt('MAIN_MULTILANGS') && empty($newlang) && GETPOST('lang_id', 'aZ09')) {
-				$newlang = GETPOST('lang_id', 'aZ09');
-			}
-			if (getDolGlobalInt('MAIN_MULTILANGS') && empty($newlang)) {
-				$factureClient->fetch_thirdparty();
-				$newlang = $factureClient->thirdparty->default_lang;
-			}
-			if (!empty($newlang)) {
-				$outputlangs = new Translate("", $conf);
-				$outputlangs->setDefaultLang($newlang);
-			}
-			$ret = $factureClient->fetch($id); // Reload to get new records
-
-			$result = $factureClient->generateDocument($factureClient->model_pdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
-			if ($result < 0) {
-				setEventMessages($factureClient->error, $factureClient->errors, 'errors');
-			} else {
-				setEventMessage("Fichier regénéré avec succès", 'mesgs');
-			}
-		}*/
 		
 	}
 }
@@ -354,8 +329,8 @@ if ($action && $action == 'validate') {
 		print '<td>' . (($mt < 0) ? -$mt . "" : 0) . '</td>';
 		print '</tr>';
 	}
-	printCompta($account_supplier, $factureClient, $facturefourn, $thirdparty_buyer->code_compta, (float) $amount);
-	printCompta($account_client, $facturefourn, $factureClient, $thirdparty_seller->code_compta_fournisseur, - (float)$amount);
+	printCompta($account_supplier, $factureClient, $facturefourn, $thirdparty_customer->code_compta, (float) $amount);
+	printCompta($account_client, $facturefourn, $factureClient, $thirdparty_supplier->code_compta_fournisseur, - (float)$amount);
 
 	print '</table>';
 

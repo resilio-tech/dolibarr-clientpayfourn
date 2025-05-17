@@ -119,11 +119,27 @@ if (!$resql) {
 		$list_accounting[$obj->rowid] = $label;
 	}
 }
+
+$list_journal = array();
+$sql = "SELECT *";
+$sql .= " FROM ".$db->prefix()."accounting_journal";
+$resql = $db->query($sql);
+if (!$resql) {
+	$this->error = "Error ".$db->lasterror();
+} else {
+	while ($obj = $db->fetch_object($resql)) {
+		$label = $obj->code.' - '. $langs->transnoentities($obj->label);
+		$list_journal[$obj->rowid] = $label;
+	}
+}
+
 // Setup conf for selection of an URL
 $item = $formSetup->newItem('CLIENTPAYFOURN_CLIENT_ACCOUNTING');
 $item->setAsSelect($list_accounting);
 $item = $formSetup->newItem('CLIENTPAYFOURN_FOURN_ACCOUNTING');
 $item->setAsSelect($list_accounting);
+$item = $formSetup->newItem('CLIENTPAYFOURN_JOURNAL');
+$item->setAsSelect($list_journal);
 
 
 $setupnotempty += count($formSetup->items);

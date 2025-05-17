@@ -127,6 +127,11 @@ $account_supplier = new AccountingAccount($db);
 $account_supplier->fetch(empty($accounting_fourn) ? getDolGlobalString('CLIENTPAYFOURN_FOURN_ACCOUNTING') : $accounting_fourn);
 $account_client = new AccountingAccount($db);
 $account_client->fetch(empty($accounting_client) ? getDolGlobalString('CLIENTPAYFOURN_CLIENT_ACCOUNTING') : $accounting_client);
+$JOURNAL_CODE = getDolGlobalString('CLIENTPAYFOURN_JOURNAL');
+if (empty($JOURNAL_CODE)) {
+	setEventMessage("Misconfigured module: Check config for ClientPayFourn", 'errors'); 
+	header("Location: /custom/clientpayfourn/admin/setup.php");
+}
 
 if ($action && $action == 'save') {
 	if (!$facture_id || !$facturefourn_id || !$fourn_soc_id || !$client_soc_id) {
@@ -152,64 +157,24 @@ if ($action && $action == 'save') {
 			$resql = $db->query($sql);
 			if ($resql) {
 				setEventMessage("Link created", 'mesgs');
-
-				$paye = $amount == $facturefourn->total_ttc ? 1 : 0;
-				$status = $paye ? 2 : 1;
-				$sql_fourn = "UPDATE " . MAIN_DB_PREFIX . "facture_fourn SET fk_statut = ".$status.", paye = ".$paye." WHERE rowid = " . (int)$facturefourn_id;
-				$resql_fourn = $db->query($sql_fourn);
-				if ($resql_fourn) {
-					setEventMessage("Facture fournisseur changé", 'mesgs');
-				} else {
-					setEventMessage("Erreur lors du changement facture fournisseur", 'errors');
-				}
-
-				$sql_facture = "UPDATE " . MAIN_DB_PREFIX . "facture SET fk_statut = 2, paye = 1 WHERE rowid = " . (int)$facture_id;
-				$resql_facture = $db->query($sql_facture);
-				if ($resql_facture) {
-					setEventMessage("Facture client changé", 'mesgs');
-				} else {
-					setEventMessage("Erreur lors du changement facture client", 'errors');
-				}
-				/* To delete ?
-				$sql_accountingfourn = " UPDATE ".MAIN_DB_PREFIX."facture_fourn_det";
-				$sql_accountingfourn .= " SET fk_code_ventilation = ".((int) $accounting_fourn);
-				$sql_accountingfourn .= " WHERE rowid = ".((int) $facturefourn_id);
-				$resql_accountingfourn = $db->query($sql_accountingfourn);
-				if ($resql_accountingfourn) {
-					setEventMessage("Compte comptable fournisseur changé", 'mesgs');
-				} else {
-					setEventMessage("Erreur lors du changement compte comptable fournisseur", 'errors');
-				}
-				$sql_accountingclient = " UPDATE ".MAIN_DB_PREFIX."facturedet";
-				$sql_accountingclient .= " SET fk_code_ventilation = ".((int) $accounting_client);
-				$sql_accountingclient .= " WHERE rowid = ".((int) $facture_id);
-				$resql_accountingclient = $db->query($sql_accountingclient);
-				if ($resql_accountingclient) {
-					setEventMessage("Compte comptable client changé", 'mesgs');
-				} else {
-					setEventMessage("Erreur lors du changement compte comptable client", 'errors');
-				}
-				header("Location: /fourn/facture/card.php?facid=" . $facturefourn_id);*/
 			} else {
 				setEventMessage("Erreur lors de la création du lien", 'errors');
 			}
 		}
 
-		function createBookKeeping($invoice, $counter_part, $account, $thirdparty, $mt, $j)
+		function createBookKeeping($invoice, $counter_part, $account, $thirdparty, $mt, $ref, $fk_doc)
 		{
-			global $db, $now, $journal, $journal_label, $langs, $user, $date, $conf, $action;
+			global $db, $now, $langs, $user, $date, $conf, $action, $JOURNAL_CODE;
 			$accountingjournalstatic = new AccountingJournal($db);
-			$accountingjournalstatic->fetch($j);
-			$journal = $accountingjournalstatic->code;
-			$journal_label = $accountingjournalstatic->label;
+			$accountingjournalstatic->fetch($JOURNAL_CODE);
 
 			$bookkeeping = new BookKeeping($db);
 			$bookkeeping->doc_date = date_create($date)->getTimestamp();
 			$bookkeeping->date_lim_reglement = date_create($date)->getTimestamp();
-			$bookkeeping->doc_ref = $invoice->ref;
+			$bookkeeping->doc_ref = $ref;
 			$bookkeeping->date_creation = $now;
-			$bookkeeping->doc_type = 'special_clientpayfourn';
-			$bookkeeping->fk_doc = $invoice->id;
+			$bookkeeping->doc_type = 'customer_invoice';//'special_clientpayfourn';
+			$bookkeeping->fk_doc = $fk_doc;
 			$bookkeeping->fk_docdet = 0;
 			$bookkeeping->thirdparty_code = $mt > 0 ? $thirdparty->code_fournisseur : $thirdparty->code_client;
 
@@ -224,84 +189,50 @@ if ($action && $action == 'save') {
 			$bookkeeping->sens = ($mt >= 0) ? 'D' : 'C';
 			$bookkeeping->debit = ($mt >= 0) ? $mt : 0;
 			$bookkeeping->credit = ($mt < 0) ? -$mt : 0;
-			$bookkeeping->code_journal = $journal;
-			$bookkeeping->journal_label = $langs->transnoentities($journal_label);
+			$bookkeeping->code_journal = $accountingjournalstatic->code;
+			$bookkeeping->journal_label = $langs->transnoentities($accountingjournalstatic->label);
 			$bookkeeping->fk_user_author = $user->id;
 			$bookkeeping->entity = $conf->entity;
 
 			return $bookkeeping->create($user);
 		}
 
-		function createPaiment() 
+		function createDiscount($invoice, $invoice_supp, $thirdparty, $amount) 
 		{
-			$paiementfourn = new PaiementFourn($db);
-			$ref = $paiementfourn->getNextNumRef($fourn_soc_id);
-			$sql_paimentfourn = "INSERT INTO " . MAIN_DB_PREFIX . "paiementfourn";
-			$sql_paimentfourn .= " (ref, entity, tms, datec, datep, amount, multicurrency_amount, fk_user_author, fk_user_modif, fk_paiement, num_paiement, statut, fk_bank, note)";
-			$sql_paimentfourn .= " VALUES ('" . $ref . "', " . $conf->entity . ", '" . $db->idate($now) . "', '" . $db->idate($now) . "', '" . $db->idate($now) . "', " . $amount . ", " . $factureClient->multicurrency_total_ttc . ", " . $user->id . ", " . $user->id . ", 0, '', 0, 0, 'Payé par Client ". $factureClient->ref ."')";
+			global $db, $user;
+			require_once DOL_DOCUMENT_ROOT.'/core/class/discount.class.php';
 
-			$resql_paimentfourn = $db->query($sql_paimentfourn);
-			if ($resql_paimentfourn) {
-				setEventMessage("Paiement fournisseur créé", 'mesgs');
-				$paimentfourn = $db->last_insert_id( MAIN_DB_PREFIX . 'paiementfourn' );
+			// Create the discount
+			$discount = new DiscountAbsolute($db);
+			$discount->description = 'DebtCompensation';
+			$discount->fk_soc = $thirdparty->id;
+			//$discount->fk_facture_source = $invoice->id;
+			$discount->fk_invoice_supplier = $invoice_supp->id;
+			$discount->amount_ht = $discount->amount_ttc = $amount;
+			$discount->amount_tva = 0;
+			$discount->tva_tx = 0;
+			$discount->vat_src_code = '';
+			$id_result = $discount->create($user);
 
-				$sql_payment = "INSERT INTO " . MAIN_DB_PREFIX . "paiementfourn_facturefourn";
-				$sql_payment .= " (fk_paiementfourn, fk_facturefourn, amount, multicurrency_code, multicurrency_tx, multicurrency_amount)";
-				$sql_payment .= " VALUES (".$paimentfourn.", ".$facturefourn_id.", ".$amount.", '".$factureClient->multicurrency_code."', $factureClient->multicurrency_tx, $factureClient->multicurrency_total_ttc)";
-
-				$resql_payment = $db->query($sql_payment);
-				if ($resql_payment) {
-					setEventMessage("Paiement créé", 'mesgs');
-				} else {
-					$db->rollback();
-					setEventMessage("Erreur lors de la création du paiement", 'errors');
-					var_dump($sql_payment);
-					var_dump($db->lasterror());
-					$action = '';
-				}
-			} else {
+			if ($id_result < 0) {
 				$db->rollback();
-				setEventMessage("Erreur lors de la création du paiement fournisseur", 'errors');
-				var_dump($sql_paimentfourn);
-				var_dump($db->lasterror());
-				$action = '';
-			}
-		}
-
-		function OLDcreatePaiment() 
-		{
-			$paiementfourn = new PaiementFourn($db);
-			$ref = $paiementfourn->getNextNumRef($fourn_soc_id);
-			$sql_paimentfourn = "INSERT INTO " . MAIN_DB_PREFIX . "paiementfourn";
-			$sql_paimentfourn .= " (ref, entity, tms, datec, datep, amount, multicurrency_amount, fk_user_author, fk_user_modif, fk_paiement, num_paiement, statut, fk_bank, note)";
-			$sql_paimentfourn .= " VALUES ('" . $ref . "', " . $conf->entity . ", '" . $db->idate($now) . "', '" . $db->idate($now) . "', '" . $db->idate($now) . "', " . $amount . ", " . $factureClient->multicurrency_total_ttc . ", " . $user->id . ", " . $user->id . ", 0, '', 0, 0, 'Payé par Client ". $factureClient->ref ."')";
-
-			$resql_paimentfourn = $db->query($sql_paimentfourn);
-			if ($resql_paimentfourn) {
-				setEventMessage("Paiement fournisseur créé", 'mesgs');
-				$paimentfourn = $db->last_insert_id( MAIN_DB_PREFIX . 'paiementfourn' );
-
-				$sql_payment = "INSERT INTO " . MAIN_DB_PREFIX . "paiementfourn_facturefourn";
-				$sql_payment .= " (fk_paiementfourn, fk_facturefourn, amount, multicurrency_code, multicurrency_tx, multicurrency_amount)";
-				$sql_payment .= " VALUES (".$paimentfourn.", ".$facturefourn_id.", ".$amount.", '".$factureClient->multicurrency_code."', $factureClient->multicurrency_tx, $factureClient->multicurrency_total_ttc)";
-
-				$resql_payment = $db->query($sql_payment);
-				if ($resql_payment) {
-					setEventMessage("Paiement créé", 'mesgs');
-				} else {
-					$db->rollback();
-					setEventMessage("Erreur lors de la création du paiement", 'errors');
-					var_dump($sql_payment);
-					var_dump($db->lasterror());
-					$action = '';
-				}
+				setEventMessage("Discount failed to be created, payment not recorded", 'errors');
+				var_dump(
+					array(
+						'sql' => $db->lasterror(), 
+						'discount' => $discount,
+					)
+				);
+				$action = 'validate';
 			} else {
-				$db->rollback();
-				setEventMessage("Erreur lors de la création du paiement fournisseur", 'errors');
-				var_dump($sql_paimentfourn);
-				var_dump($db->lasterror());
-				$action = '';
+				$db->commit();
+				setEventMessage("Discount created", 'mesgs');
 			}
+
+			// Mark the supplier invoice as paid
+			$invoice_supp->setPaid($user);
+			
+			return $id_result;
 		}
 
 		/* MANAGE LINK */
@@ -315,26 +246,71 @@ if ($action && $action == 'save') {
 			} else {
 				createLink($facture_id, $facturefourn_id);
 			}
+		} else {
+			var_dump($db->lasterror());
 		}
 
 		/* Manage Payments */
-		/***/
+		// Create discount from the supplier invoice
+		$id_discount = createDiscount($factureClient, $facturefourn, $thirdparty_buyer, $amount);
+
+		// Use the credit to reduce remain to pay
+		$discount = new DiscountAbsolute($db);
+		$discount->fetch($id_discount);
+		$result = $discount->link_to_invoice(0, $factureClient->id);
+
+		if ($result < 0) {
+			setEventMessages($discount->error, $discount->errors, 'errors');
+			$db->rollback();
+		} else {
+			$db->commit();
+			setEventMessage("Paiement créé", 'mesgs');
+		}
+
+		$newremaintopay = $factureClient->getRemainToPay(0);
+		if ($newremaintopay == 0) {
+			$factureClient->setPaid($user);
+		}
 
 		/* MANAGE Bookeeping */
-		$compta_1 = createBookKeeping($facturefourn, $factureClient, $account_client, $thirdparty_seller, (float) $amount, 1);
-		$compta_2 = createBookKeeping($factureClient, $facturefourn, $account_supplier, $thirdparty_buyer, - (float) $amount, 2);
+		$compta_1 = createBookKeeping($facturefourn, $factureClient, $account_client, $thirdparty_seller, (float) $amount, $factureClient->ref, $factureClient->id);
+		$compta_2 = createBookKeeping($factureClient, $facturefourn, $account_supplier, $thirdparty_buyer, - (float) $amount, $factureClient->ref, $factureClient->id);
 		if ($compta_1 != 0 || $compta_2 != 0) {
-			$db->rollback();
 			setEventMessage("Erreur lors de la création d'écritures comptable", 'errors');
 			var_dump(array("compta_1", $compta_1));
 			var_dump(array("compta_2", $compta_2));
 			var_dump($db->lasterror());
+			$db->rollback();
 			$action = 'validate';
 		} else {
-			$db->commit();
 			setEventMessage("Ecritures comptable créées", 'mesgs');
 			header("Location: /fourn/facture/card.php?facid=" . $facturefourn_id);
 		}
+
+		// Re-generate Client invoice PDF
+		/*if (empty($error) && !getDolGlobalString('MAIN_DISABLE_PDF_AUTOUPDATE')) {
+			$outputlangs = $langs;
+			$newlang = '';
+			if (getDolGlobalInt('MAIN_MULTILANGS') && empty($newlang) && GETPOST('lang_id', 'aZ09')) {
+				$newlang = GETPOST('lang_id', 'aZ09');
+			}
+			if (getDolGlobalInt('MAIN_MULTILANGS') && empty($newlang)) {
+				$factureClient->fetch_thirdparty();
+				$newlang = $factureClient->thirdparty->default_lang;
+			}
+			if (!empty($newlang)) {
+				$outputlangs = new Translate("", $conf);
+				$outputlangs->setDefaultLang($newlang);
+			}
+			$ret = $factureClient->fetch($id); // Reload to get new records
+
+			$result = $factureClient->generateDocument($factureClient->model_pdf, $outputlangs, $hidedetails, $hidedesc, $hideref);
+			if ($result < 0) {
+				setEventMessages($factureClient->error, $factureClient->errors, 'errors');
+			} else {
+				setEventMessage("Fichier regénéré avec succès", 'mesgs');
+			}
+		}*/
 		
 	}
 }
@@ -378,13 +354,14 @@ if ($action && $action == 'validate') {
 		print '<td>' . (($mt < 0) ? -$mt . "" : 0) . '</td>';
 		print '</tr>';
 	}
-	printCompta($account_supplier, $factureClient, $facturefourn, $thirdparty_buyer->code_compta, $amount);
-	printCompta($account_client, $facturefourn, $factureClient, $thirdparty_seller->code_compta_fournisseur, -$amount);
+	printCompta($account_supplier, $factureClient, $facturefourn, $thirdparty_buyer->code_compta, (float) $amount);
+	printCompta($account_client, $facturefourn, $factureClient, $thirdparty_seller->code_compta_fournisseur, - (float)$amount);
 
 	print '</table>';
 
 	print '<input type="submit" class="button" name="submit" value="' . $langs->trans("ClientPayFournValidate") . '">';
 
+	print '<input type="hidden" name="amount" value="' . $amount . '">';
 	print '<input type="hidden" name="facturefourn_id" value="' . $facturefourn_id . '">';
 	print '<input type="hidden" name="facture_id" value="' . $facture_id . '">';
 	print '<input type="hidden" name="accounting_fourn" value="' . $accounting_fourn . '">';

@@ -18,29 +18,31 @@
 #
 
 # Module label 'ModuleClientPayFournName'
-ModuleClientPayFournName = ClientPayFourn
+ModuleClientPayFournName = Compensation de créance / Paiement direct fournisseur
 # Module description 'ModuleClientPayFournDesc'
-ModuleClientPayFournDesc = ClientPayFourn description
+ModuleClientPayFournDesc = Ce module permet l'enregistrement d'opérations de compensation de créance / paiement direct fournisseur, notamment utilisé dans les marchés publics français en cas de sous-traitance
 
 #
 # Admin page
 #
-ClientPayFournSetup = ClientPayFourn setup
-Settings = Settings
-ClientPayFournSetupPage = ClientPayFourn setup page
-CLIENTPAYFOURN_MYPARAM1 = My param 1
-CLIENTPAYFOURN_MYPARAM1Tooltip = My param 1 tooltip
-CLIENTPAYFOURN_MYPARAM2=My param 2
-CLIENTPAYFOURN_MYPARAM2Tooltip=My param 2 tooltip
+ClientPayFournSetup = Configuration - Module Compensation de créance / Paiement direct
+Settings = Paramètres
+ClientPayFournSetupPage = Page de configuration - Module Compensation de créance / Paiement direct
+CLIENTPAYFOURN_CLIENT_ACCOUNTING = Compte Client
+CLIENTPAYFOURN_FOURN_ACCOUNTING = Compte Fournisseur
+CLIENTPAYFOURN_JOURNAL = Journal comptable pour les écritures
 
 #
 # About page
 #
-About = About
-ClientPayFournAbout = About ClientPayFourn
-ClientPayFournAboutPage = ClientPayFourn about page
+About = A propos
+ClientPayFournAbout = A propos - Module Compensation de créance / Paiement direct fournisseur
+ClientPayFournAboutPage = Page A propos -  Module Compensation de créance / Paiement direct fournisseur
 
 
+#
+# Parcours de compensation de créance / Paiement fournisseur 
+#
 ClientPayFournButton = Paiement direct Fournisseur
 ClientPayFournArea = Zone de paiement direct Fournisseur
 ClientPayFournFournisseur = Fournisseur
@@ -50,11 +52,28 @@ ClientPayFournButtonLink = Associer
 ClientPayFournValidate = Valider
 ClientPayFournCompta = Entrée en Comptabilité
 
-CLIENTPAYFOURN_CLIENT_ACCOUNTING = Comptabilité client
-CLIENTPAYFOURN_FOURN_ACCOUNTING = Comptabilité fournisseur
-
-ClientPayFournFactureClientCompta = Facture client comptabilité
-ClientPayFournFactureFournCompta = Facture fournisseur comptabilité
+ClientPayFournFactureClientCompta = Compte Facture Client
+ClientPayFournFactureFournCompta = Compte Facture Fournisseur
 
 ClientPayFournFactureClientLinked = Facture client liée
 ClientPayFournFactureFournLinked = Facture fournisseur liée
+
+DebtCompensation = Compensation de créance
+
+CPF_Misconfigured = Module "Compensation de créance / paiement direct fournisseur" mal configuré
+
+CPF_SupplierUndefined = Société fournisseur non renseignée
+CPF_CustomerUndefined = Société client non renseignée
+CPF_CustomerInvoiceUndefined = Facture client non renseignée
+CPF_SupplierInvoiceUndefined = Facture fournisseur non renseignée
+
+CPF_ExistingLink = Lien existant, processus avorté
+CPF_LinkCreationError = Erreur lors de la création du lien
+CPF_AntiDuplicateCheckFailed = Controle anti-duplication échoué
+
+CPF_DiscountCreationFailed = Erreur lors de la création de la remise compensatoire, paiement non enregistré
+CPF_DiscountCreated = Remise compensatoire enregistrée
+CPF_PaymentRecorded = Paiement enregistré
+
+CPF_ErrorBookkeepingCreation = Erreur lors de la création des écritures comptables
+CPF_BookkeepingCreated = Ecritures comptables créées

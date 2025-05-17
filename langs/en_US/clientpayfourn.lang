@@ -1,0 +1,79 @@
+# Copyright (C) 2024 Resilio SA
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+#
+# Generic
+#
+
+# Module label 'ModuleClientPayFournName'
+ModuleClientPayFournName = Debt Compensation
+# Module description 'ModuleClientPayFournDesc'
+ModuleClientPayFournDesc = Enable Suplier <-> Customer debt compensation
+
+#
+# Admin page
+#
+ClientPayFournSetup = Setup - Debt Compensation Module
+Settings = Settings
+ClientPayFournSetupPage = Debt Compensation Module - Setup page
+CLIENTPAYFOURN_CLIENT_ACCOUNTING = Customer Account
+CLIENTPAYFOURN_FOURN_ACCOUNTING = Supplier Account
+CLIENTPAYFOURN_JOURNAL = Accounting journal for compensation bookkeeping entries
+
+#
+# About page
+#
+About = About
+ClientPayFournAbout = About Debt Compensation Module
+ClientPayFournAboutPage = Debt Compensation Module - About page
+
+
+#
+# Parcours de compensation de créance / Paiement fournisseur 
+#
+ClientPayFournButton = Debt Compensation
+ClientPayFournArea = Workflow - Debt Compensation
+ClientPayFournFournisseur = Supplier
+ClientPayFournFournisseurOptional = (Optional, help for search)
+ClientPayFournFacture = Supplier Invoice
+ClientPayFournButtonLink = Compensate
+ClientPayFournValidate = Validate
+ClientPayFournCompta = Record in books
+
+ClientPayFournFactureClientCompta = Customer Invoice account
+ClientPayFournFactureFournCompta = Supplier Invoice account
+
+ClientPayFournFactureClientLinked = Customer Invoice associated
+ClientPayFournFactureFournLinked = Supplier Invoice associated
+
+DebtCompensation = Debt Compensation
+
+CPF_Misconfigured = Misconfigured module: Check config for ClientPayFourn
+
+CPF_SupplierUndefined = Thirdparty Supplier undefined
+CPF_CustomerUndefined = Thirdparty Customer undefined
+CPF_CustomerInvoiceUndefined = Undefined Customer Invoice
+CPF_SupplierInvoiceUndefined = Undefined Supplier Invoice
+
+CPF_ExistingLink = Existing link, process stopped
+CPF_LinkCreationError = Erreur creating Debt Compensation link
+CPF_AntiDuplicateCheckFailed = Anti-duplicate check failed
+
+CPF_DiscountCreationFailed = Discount failed to be created, payment not recorded
+CPF_DiscountCreated = Discount created
+CPF_PaymentRecorded = Payment recorded
+
+CPF_ErrorBookkeepingCreation = Error while creating bookkeepting entries
+CPF_BookkeepingCreated = Bookkeepting entries created

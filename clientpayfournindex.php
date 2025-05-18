@@ -112,14 +112,6 @@ if (!$client_soc_id) {
 	$thirdparty_customer->fetch($client_soc_id);
 }
 
-var_dump(
-	array(
-		"supplier_invoice_id" => $supplier_invoice_id,
-		"facture_id" => $facture_id,
-		"action" => $action,
-	)
-);
-
 require_once DOL_DOCUMENT_ROOT.'/accountancy/class/accountingjournal.class.php';
 require_once DOL_DOCUMENT_ROOT.'/accountancy/class/accountingaccount.class.php';
 require_once DOL_DOCUMENT_ROOT . '/accountancy/class/bookkeeping.class.php';
@@ -153,7 +145,6 @@ if ($action && $action == 'save') {
 		$sql = "SELECT fk_facture_client, fk_facture_fourn FROM " . MAIN_DB_PREFIX . "clientpayfourn_linkclientpayfourn";
 		$sql .= " WHERE fk_facture_client = " . (int)$facture_id . " AND fk_facture_fourn = " . (int)$supplier_invoice_id;
 		$resql = $db->query($sql);
-		var_dump($resql);
 		if ($resql) {
 			if ($db->num_rows($resql) > 0) {
 				setEventMessage($langs->trans("CPF_ExistingLink"), 'errors');
@@ -167,7 +158,7 @@ if ($action && $action == 'save') {
 			}
 		} else {
 			setEventMessage($langs->trans("CPF_AntiDuplicateCheckFailed"), 'warning');
-			var_dump($db->lasterror());
+			// var_dump($db->lasterror());
 		}
 
 		/* Manage Payments */
@@ -176,12 +167,12 @@ if ($action && $action == 'save') {
 		if ($id_discount < 0) {
 			$db->rollback();
 			setEventMessage($langs->trans("CPF_DiscountCreationFailed"), 'errors');
-			var_dump(
+			/* var_dump(
 				array(
 					'sql' => $db->lasterror(), 
 					'discount' => $discount,
 				)
-			);
+			);*/
 			$action = 'validate';
 		} else {
 			$db->commit();
@@ -215,15 +206,15 @@ if ($action && $action == 'save') {
 		$bk_2 = createBookKeeping($client_invoice, $supplier_invoice, $account_client, $thirdparty_customer, - (float) $amount, $ref, $link_id, $JOURNAL_CODE);
 		if ($bk_1 != 0 || $bk_2 != 0) {
 			setEventMessage($langs->trans("CPF_ErrorBookkeepingCreation"), 'errors');
-			var_dump(array("Bookkeeping Supplier", $bk_1));
+			/*var_dump(array("Bookkeeping Supplier", $bk_1));
 			var_dump(array("Bookkeeping Customer", $bk_2));
-			var_dump($db->lasterror());
+			var_dump($db->lasterror());*/
 			$db->rollback();
 			$action = 'validate';
 		} else {
 			setEventMessage("CPF_BookkeepingCreated", 'mesgs');
 			$db->commit();
-			//header("Location: /fourn/facture/card.php?facid=" . $supplier_invoice_id);
+			header("Location: /fourn/facture/card.php?facid=" . $supplier_invoice_id);
 		}
 		
 	}

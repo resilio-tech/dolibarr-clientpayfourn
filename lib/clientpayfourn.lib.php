@@ -147,12 +147,12 @@ function createBookKeeping($invoice, $counter_part, $account, $thirdparty, $mt, 
 
 function createDiscount($invoice, $invoice_supp, $thirdparty, $amount) 
 {
-	global $db, $user;
+	global $db, $user, $langs;
 	require_once DOL_DOCUMENT_ROOT.'/core/class/discount.class.php';
 
 	// Create the discount
 	$discount = new DiscountAbsolute($db);
-	$discount->description = 'DebtCompensation - '.$invoice_supp->ref;
+	$discount->description = $langs->trans("DebtCompensation").' - '.$invoice_supp->ref;
 	$discount->fk_soc = $thirdparty->id;
 	$discount->fk_facture_source = $invoice->id;
 	$discount->fk_invoice_supplier_source = $invoice_supp->id;

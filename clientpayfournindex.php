@@ -246,13 +246,13 @@ if ($action && $action == 'validate') {
 
 	print '<table style="text-align: left ;width: 100%;">';
 	print '<tr>';
-	print '<th>'. $langs->trans("Date"). '</th>';
-	print '<th>'. $langs->trans("Ref"). '</th>';
+	print '<th>'. $langs->trans("Docdate"). '</th>';
+	print '<th>'. $langs->trans("Piece"). '</th>';
 	print '<th>'. $langs->trans("Account"). '</th>';
-	print '<th>'. $langs->trans("Subledger"). '</th>';
-	print '<th>'. $langs->trans("Libelle"). '</th>';
-	print '<th>'. $langs->trans("Débit"). '</th>';
-	print '<th>'. $langs->trans("Crédit"). '</th>';
+	print '<th>'. $langs->trans("SubledgerAccount"). '</th>';
+	print '<th>'. $langs->trans("Label"). '</th>';
+	print '<th>'. $langs->trans("AccountingDebit"). '</th>';
+	print '<th>'. $langs->trans("AccountingCredit"). '</th>';
 	print '</tr>';
 
 	function printCompta($account, $fac, $counter_part, $subledger, $mt)

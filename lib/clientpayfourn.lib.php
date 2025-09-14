@@ -156,6 +156,7 @@ function createDiscount($invoice, $invoice_supp, $thirdparty, $amount)
 	$discount->fk_soc = $thirdparty->id;
 	// When generalizing, reactivate on good usecases $discount->fk_facture_source = $invoice->id;
 	$discount->fk_invoice_supplier_source = $invoice_supp->id;
+	$discount->fk_facture_source = $invoice->id;
 	$discount->amount_ht = $discount->amount_ttc = $amount;
 	$discount->amount_tva = 0;
 	$discount->tva_tx = 0;

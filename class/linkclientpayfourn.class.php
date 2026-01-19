@@ -25,6 +25,9 @@
 
 // Put here all includes required by your class file
 require_once DOL_DOCUMENT_ROOT.'/core/class/commonobject.class.php';
+require_once DOL_DOCUMENT_ROOT . '/compta/facture/class/facture.class.php';
+require_once DOL_DOCUMENT_ROOT . '/fourn/class/fournisseur.facture.class.php';
+
 //require_once DOL_DOCUMENT_ROOT . '/societe/class/societe.class.php';
 //require_once DOL_DOCUMENT_ROOT . '/product/class/product.class.php';
 
@@ -57,7 +60,7 @@ class LinkClientPayFourn extends CommonObject
 	/**
 	 * @var int  Does object support extrafields ? 0=No, 1=Yes
 	 */
-	public $isextrafieldmanaged = 1;
+	public $isextrafieldmanaged = 0;
 
 	/**
 	 * @var string String with name of icon for linkclientpayfourn. Must be a 'fa-xxx' fontawesome code (or 'fa-xxx_fa_color_size') or 'linkclientpayfourn@clientpayfourn' if picto is file 'img/object_linkclientpayfourn.png'.
@@ -68,6 +71,13 @@ class LinkClientPayFourn extends CommonObject
 	const STATUS_DRAFT = 0;
 	const STATUS_VALIDATED = 1;
 	const STATUS_CANCELED = 9;
+
+	// Parameters
+	public $element_to_db_field = array(
+		'facture' => 'fk_facture_client',
+		'facture_fourn' => 'fk_facture_fourn',
+		'invoice_supplier' => 'fk_facture_fourn',
+	); 
 
 	/**
 	 *  'type' field format:
@@ -1174,6 +1184,108 @@ class LinkClientPayFourn extends CommonObject
 		dol_syslog(__METHOD__." end", LOG_INFO);
 
 		return $error;
+	}
+
+	/**
+	 * Return a list of links Objects from a research in the database
+	 *
+	 * @param 	Facture|FactureFourn Object    		$node   	Invoice (supplier) Object for which we look for the links
+	 * @return 	array[LinkClientPayFourn Object]				Return empty if not found, array
+	 */
+	public function getLinks(Facture|FactureFourn $node) : array
+	{
+		dol_syslog(__METHOD__, LOG_DEBUG);
+		
+		// Ensure $node->element, the object type identifier is one managed
+		if (!array_key_exists($node->element, $this->element_to_db_field)) {
+			dol_syslog("Use of LinkClientPayFourn->getLinks() with unrecognized element: " . $node->element, LOG_WARN);		
+			return [] ;
+		}
+		
+		// SQL Request
+		$records = array();
+
+		$sql = "SELECT ";
+		$sql .= $this->getFieldList('t');
+		$sql .= " FROM ".$this->db->prefix().$this->table_element." as t";
+		if (isset($this->isextrafieldmanaged) && $this->isextrafieldmanaged == 1) {
+			$sql .= " LEFT JOIN ".$this->db->prefix().$this->table_element."_extrafields as te ON te.fk_object = t.rowid";
+		}
+		if (isset($this->ismultientitymanaged) && $this->ismultientitymanaged == 1) {
+			$sql .= " WHERE t.entity IN (".getEntity($this->element).")";
+		} 
+
+		$sql .= " WHERE ".$this->element_to_db_field[$node->element]." = ".$node->id." ";
+		$sql .= $this->db->order('datec', 'ASC');
+
+		$resql = $this->db->query($sql);
+
+		// Result
+		if ($resql) {
+			$num = $this->db->num_rows($resql);
+			$i = 0;
+			while ($i < $num) {
+				$obj = $this->db->fetch_object($resql);
+
+				$record = new self($this->db);
+				$record->setVarsFromFetchObj($obj);
+
+				$records[$record->id] = $record;
+
+				$i++;
+			}
+			$this->db->free($resql);
+		} else {
+			$this->errors[] = 'Error '.$this->db->lasterror();
+			dol_syslog(__METHOD__.' '.join(',', $this->errors), LOG_ERR);
+
+			return -1;
+		}
+
+		return $records;
+	}	
+
+
+	/**
+	 * Return a list of linked target Objects from a research in the database
+	 *
+	 * @param 	Facture|FactureFourn Object    		$node   	Invoice (supplier) Object for which we look for the links
+	 * @param 	DoliDB 								$db 		Gestionnaire de base de données.
+	 * @return 	array[Facture|FactureFourn Object]				Return empty if not found, array
+	 */
+	public function getLinkedObjects(Facture|FactureFourn $node, DoliDB $db) : array
+	{
+		dol_syslog(__METHOD__, LOG_DEBUG);
+
+		// Determine field for target object id and type		
+		$source_type = $node->element;
+		switch ($this->element_to_db_field[$source_type]) {
+			case 'fk_facture_fourn':
+				$target_id_field = 'fk_facture_client';
+				$target_class = 'Facture';
+				break;
+			case 'fk_facture_client':
+				$target_id_field = 'fk_facture_fourn';
+				$target_class = 'FactureFournisseur';
+				break;
+			default:
+				dol_syslog(__METHOD__.' is called using unknown node type.', LOG_ERR);
+				return -1;
+		}
+
+		// Get links
+		$links = $this->getLinks($node);
+
+		// Iterate over links to generate target objects
+		$result = [];
+		foreach ($links as $link) {
+			$target_id = $link->$target_id_field;
+			$object = new $target_class($db);
+			$object->fetch($target_id);
+			$result[] = $object;
+		}
+
+		return $result;
 	}
 }
 

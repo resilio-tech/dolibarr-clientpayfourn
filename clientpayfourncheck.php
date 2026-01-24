@@ -19,9 +19,9 @@
  */
 
 /**
- *	\file       clientpayfourn/clientpayfournindex.php
+ *	\file       clientpayfourn/clientpayfourncheck.php
  *	\ingroup    clientpayfourn
- *	\brief      Home page of clientpayfourn top menu
+ *	\brief      Check linked invoices between client and supplier
  */
 
 // Load Dolibarr environment
@@ -56,17 +56,12 @@ if (!$res) {
 	die("Include of main fails");
 }
 
-require_once DOL_DOCUMENT_ROOT.'/core/class/html.formfile.class.php';
-
 // Load translation files required by the page
 $langs->loadLangs(array("clientpayfourn@clientpayfourn"));
 
 $action = GETPOST('action', 'aZ09');
 $clientid = GETPOST('clientid', 'int');
 $fournid = GETPOST('fournid', 'int');
-
-$max = 5;
-$now = dol_now();
 
 // Security check - Protection if external user
 $socid = GETPOST('socid', 'int');

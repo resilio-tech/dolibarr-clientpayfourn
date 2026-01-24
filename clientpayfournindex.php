@@ -123,7 +123,7 @@ $account_client->fetch(empty($accounting_client) ? getDolGlobalString('CLIENTPAY
 $JOURNAL_CODE = getDolGlobalString('CLIENTPAYFOURN_JOURNAL');
 if (empty($JOURNAL_CODE)) {
 	setEventMessage("CPF_Misconfigured", 'errors'); 
-	header("Location: /custom/clientpayfourn/admin/setup.php");
+	header("Location: ".dol_buildpath('/custom/clientpayfourn/admin/setup.php', 1));
 }
 
 if ($action && $action == 'save') {
@@ -148,12 +148,12 @@ if ($action && $action == 'save') {
 		if ($resql) {
 			if ($db->num_rows($resql) > 0) {
 				setEventMessage($langs->trans("CPF_ExistingLink"), 'errors');
-				header("Location: /compta/facture/card.php?facid=" . $facture_id);
+				header("Location: ".dol_buildpath('/compta/facture/card.php', 1)."?facid=" . $facture_id);
 			} else {
 				$link_id = createLink($facture_id, $supplier_invoice_id);
 				if ($link_id == 0) {
 					setEventMessage($langs->trans("CPF_LinkCreationError"), 'errors');
-					header("Location: /fourn/facture/card.php?facid=" . $supplier_invoice_id);
+					header("Location: ".dol_buildpath('/fourn/facture/card.php', 1)."?facid=" . $supplier_invoice_id);
 				}
 			}
 		} else {
@@ -214,7 +214,7 @@ if ($action && $action == 'save') {
 		} else {
 			setEventMessage("CPF_BookkeepingCreated", 'mesgs');
 			$db->commit();
-			header("Location: /fourn/facture/card.php?facid=" . $supplier_invoice_id);
+			header("Location: ".dol_buildpath('/fourn/facture/card.php', 1)."?facid=" . $supplier_invoice_id);
 		}
 		
 	}

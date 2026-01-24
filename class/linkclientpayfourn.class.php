@@ -577,7 +577,7 @@ class LinkClientPayFourn extends CommonObject
 
 			if (!$error && !$notrigger) {
 				// Call trigger
-				$result = $this->call_trigger('MYOBJECT_VALIDATE', $user);
+				$result = $this->call_trigger('LINKCLIENTPAYFOURN_VALIDATE', $user);
 				if ($result < 0) {
 					$error++;
 				}
@@ -667,7 +667,7 @@ class LinkClientPayFourn extends CommonObject
 		 return -1;
 		 }*/
 
-		return $this->setStatusCommon($user, self::STATUS_DRAFT, $notrigger, 'CLIENTPAYFOURN_MYOBJECT_UNVALIDATE');
+		return $this->setStatusCommon($user, self::STATUS_DRAFT, $notrigger, 'LINKCLIENTPAYFOURN_UNVALIDATE');
 	}
 
 	/**
@@ -691,7 +691,7 @@ class LinkClientPayFourn extends CommonObject
 		 return -1;
 		 }*/
 
-		return $this->setStatusCommon($user, self::STATUS_CANCELED, $notrigger, 'CLIENTPAYFOURN_MYOBJECT_CANCEL');
+		return $this->setStatusCommon($user, self::STATUS_CANCELED, $notrigger, 'LINKCLIENTPAYFOURN_CANCEL');
 	}
 
 	/**
@@ -715,7 +715,7 @@ class LinkClientPayFourn extends CommonObject
 		 return -1;
 		 }*/
 
-		return $this->setStatusCommon($user, self::STATUS_VALIDATED, $notrigger, 'CLIENTPAYFOURN_MYOBJECT_REOPEN');
+		return $this->setStatusCommon($user, self::STATUS_VALIDATED, $notrigger, 'LINKCLIENTPAYFOURN_REOPEN');
 	}
 
 	/**
@@ -1070,15 +1070,15 @@ class LinkClientPayFourn extends CommonObject
 		global $langs, $conf;
 		$langs->load("clientpayfourn@clientpayfourn");
 
-		if (!getDolGlobalString('CLIENTPAYFOURN_MYOBJECT_ADDON')) {
-			$conf->global->CLIENTPAYFOURN_MYOBJECT_ADDON = 'mod_linkclientpayfourn_standard';
+		if (!getDolGlobalString('CLIENTPAYFOURN_LINKCLIENTPAYFOURN_ADDON')) {
+			$conf->global->CLIENTPAYFOURN_LINKCLIENTPAYFOURN_ADDON = 'mod_linkclientpayfourn_standard';
 		}
 
-		if (getDolGlobalString('CLIENTPAYFOURN_MYOBJECT_ADDON')) {
+		if (getDolGlobalString('CLIENTPAYFOURN_LINKCLIENTPAYFOURN_ADDON')) {
 			$mybool = false;
 
-			$file = getDolGlobalString('CLIENTPAYFOURN_MYOBJECT_ADDON').".php";
-			$classname = getDolGlobalString('CLIENTPAYFOURN_MYOBJECT_ADDON');
+			$file = getDolGlobalString('CLIENTPAYFOURN_LINKCLIENTPAYFOURN_ADDON').".php";
+			$classname = getDolGlobalString('CLIENTPAYFOURN_LINKCLIENTPAYFOURN_ADDON');
 
 			// Include file with class
 			$dirmodels = array_merge(array('/'), (array) $conf->modules_parts['models']);
@@ -1140,8 +1140,8 @@ class LinkClientPayFourn extends CommonObject
 
 			if (!empty($this->model_pdf)) {
 				$modele = $this->model_pdf;
-			} elseif (getDolGlobalString('MYOBJECT_ADDON_PDF')) {
-				$modele = getDolGlobalString('MYOBJECT_ADDON_PDF');
+			} elseif (getDolGlobalString('CLIENTPAYFOURN_LINKCLIENTPAYFOURN_ADDON_PDF')) {
+				$modele = getDolGlobalString('CLIENTPAYFOURN_LINKCLIENTPAYFOURN_ADDON_PDF');
 			}
 		}
 

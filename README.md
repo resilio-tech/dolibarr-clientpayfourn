@@ -1,96 +1,98 @@
-# CLIENTPAYFOURN FOR [DOLIBARR ERP CRM](https://www.dolibarr.org)
+# ClientPayFourn - Dolibarr Module
+
+Module for linking customer and supplier payments. Allows linking a customer invoice to a supplier invoice to manage compensations and cross-payments.
 
 ## Features
 
-Description of the module...
+- Link customer invoice ↔ supplier invoice
+- Payment compensation management
+- Document link tracking
 
-<!--
-![Screenshot clientpayfourn](img/screenshot_clientpayfourn.png?raw=true "ClientPayFourn"){imgmd}
--->
-
-Other external modules are available on [Dolistore.com](https://www.dolistore.com).
-
-## Translations
-
-Translations can be completed manually by editing files into directories *langs*.
-
-<!--
-This module contains also a sample configuration for Transifex, under the hidden directory [.tx](.tx), so it is possible to manage translation using this service.
-
-For more information, see the [translator's documentation](https://wiki.dolibarr.org/index.php/Translator_documentation).
-
-There is a [Transifex project](https://transifex.com/projects/p/dolibarr-module-template) for this module.
--->
-
+---
 
 ## Installation
 
-Prerequisites: You must have the Dolibarr ERP CRM software installed. You can down it from [Dolistore.org](https://www.dolibarr.org).
-You can also get a ready to use instance in the cloud from htts://saas.dolibarr.org
+### Prerequisites
 
+- Dolibarr >= 11.0
+- PHP >= 7.0
 
-### From the ZIP file and GUI interface
+### Module Installation
 
-If the module is a ready to deploy zip file, so with a name module_xxx-version.zip (like when downloading it from a market place like [Dolistore](https://www.dolistore.com)),
-go into menu ```Home - Setup - Modules - Deploy external module``` and upload the zip file.
+1. Copy the `clientpayfourn` folder into `htdocs/custom/`
+2. Enable the module in **Setup > Modules > Other**
 
-Note: If this screen tell you that there is no "custom" directory, check that your setup is correct:
+---
 
-<!--
+## Usage
 
-- In your Dolibarr installation directory, edit the ```htdocs/conf/conf.php``` file and check that following lines are not commented:
+### Use Cases
 
-    ```php
-    //$dolibarr_main_url_root_alt ...
-    //$dolibarr_main_document_root_alt ...
-    ```
+This module is useful when:
+- A customer is also a supplier
+- You want to compensate a customer invoice with a supplier invoice
+- You want to track links between sales and purchase documents
 
-- Uncomment them if necessary (delete the leading ```//```) and assign a sensible value according to your Dolibarr installation
+### Workflow
 
-    For example :
+1. Create a link between a customer invoice and a supplier invoice
+2. The link is saved with a status
+3. Amounts can be compensated
 
-    - UNIX:
-        ```php
-        $dolibarr_main_url_root_alt = '/custom';
-        $dolibarr_main_document_root_alt = '/var/www/Dolibarr/htdocs/custom';
-        ```
+---
 
-    - Windows:
-        ```php
-        $dolibarr_main_url_root_alt = '/custom';
-        $dolibarr_main_document_root_alt = 'C:/My Web Sites/Dolibarr/htdocs/custom';
-        ```
--->
+## Architecture
 
-<!--
+### File Structure
 
-### From a GIT repository
-
-Clone the repository in ```$dolibarr_main_document_root_alt/clientpayfourn```
-
-```sh
-cd ....../custom
-git clone git@github.com:gitlogin/clientpayfourn.git clientpayfourn
+```
+clientpayfourn/
+├── class/
+│   └── linkclientpayfourn.class.php    # Link object
+├── core/modules/
+│   └── modClientPayFourn.class.php     # Module descriptor
+├── admin/
+│   ├── setup.php                       # Configuration
+│   └── about.php                       # About
+├── lib/
+│   └── clientpayfourn.lib.php          # Common functions
+├── js/
+│   └── clientpayfourn.js.php           # JavaScript
+├── sql/                                # Database tables
+└── langs/                              # Translations
 ```
 
--->
+### Main Class
 
-### Final steps
+#### `LinkClientPayFourn`
+Represents a customer invoice ↔ supplier invoice link:
 
-From your browser:
+| Field | Type | Description |
+|-------|------|-------------|
+| `rowid` | int | Technical ID |
+| `fk_facture_client` | int | Customer invoice ID |
+| `fk_facture_fourn` | int | Supplier invoice ID |
+| `status` | int | Status (0=draft, 1=validated, 9=canceled) |
 
-  - Log into Dolibarr as a super-administrator
-  - Go to "Setup" -> "Modules"
-  - You should now be able to find and enable the module
+### SQL Table
 
+```
+llx_clientpayfourn_linkclientpayfourn  # Invoice links
+```
 
+---
 
-## Licenses
+## Development
 
-### Main code
+### Dolibarr Tables Used
 
-GPLv3 or (at your option) any later version. See file COPYING for more information.
+| Table | Usage |
+|-------|-------|
+| `llx_facture` | Customer invoices |
+| `llx_facture_fourn` | Supplier invoices |
 
-### Documentation
+---
 
-All texts and readmes are licensed under GFDL.
+## License
+
+GPLv3 - See COPYING file

@@ -69,20 +69,20 @@ global $db, $user, $conf, $langs;
 $langs->loadLangs(array("clientpayfourn@clientpayfourn"));
 
 $action = GETPOST('action', 'aZ09');
-$facture_id = GETPOST('id', 'int');
-$supplier_invoice_id = GETPOST('supplier_invoice_id', 'int');
-$accounting_fourn = GETPOST('accounting_fourn', 'int');
-$accounting_client = GETPOST('accounting_client', 'int');
-$amount = GETPOST('amount', 'float');
-$date = GETPOST('date', 'int');
-$date_day = GETPOST('dateday', 'int');
-$date_month = GETPOST('datemonth', 'int');
-$date_year = GETPOST('dateyear', 'int');
+$facture_id = GETPOSTINT('id');
+$supplier_invoice_id = GETPOSTINT('supplier_invoice_id');
+$accounting_fourn = GETPOSTINT('accounting_fourn');
+$accounting_client = GETPOSTINT('accounting_client');
+$amount = GETPOSTFLOAT('amount');
+$date = GETPOSTINT('date');
+$date_day = GETPOSTINT('dateday');
+$date_month = GETPOSTINT('datemonth');
+$date_year = GETPOSTINT('dateyear');
 $max = 5;
 $now = dol_now();
 
 // Security check - Protection if external user
-$socid = GETPOST('socid', 'int');
+$socid = GETPOSTINT('socid');
 
 $fourn_soc_id = 0;
 $supplier_invoice = new FactureFournisseur($db);

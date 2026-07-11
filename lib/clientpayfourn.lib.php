@@ -75,7 +75,7 @@ function clientpayfournAdminPrepareHead()
  */
 function createLink($date, $facture_id, $supplier_invoice_id)
 {
-	global $db, $now, $amount, $supplier_invoice, $date;
+	global $db, $now, $amount, $supplier_invoice;
 	
 	$sql = "INSERT INTO " . MAIN_DB_PREFIX . "clientpayfourn_linkclientpayfourn (fk_facture_client, fk_facture_fourn, datec)";
 	$sql .= " VALUES (" . (int)$facture_id . ", " . (int)$supplier_invoice_id . ", '".date_format(date_create($date), 'Y-m-d')."')";

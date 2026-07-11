@@ -150,7 +150,7 @@ if ($action && $action == 'save') {
 				setEventMessage($langs->trans("CPF_ExistingLink"), 'errors');
 				header("Location: ".dol_buildpath('/compta/facture/card.php', 1)."?facid=" . $facture_id);
 			} else {
-				$link_id = createLink($facture_id, $supplier_invoice_id);
+				$link_id = createLink($client_invoice->date, $facture_id, $supplier_invoice_id);
 				if ($link_id == 0) {
 					setEventMessage($langs->trans("CPF_LinkCreationError"), 'errors');
 					header("Location: ".dol_buildpath('/fourn/facture/card.php', 1)."?facid=" . $supplier_invoice_id);
@@ -202,8 +202,8 @@ if ($action && $action == 'save') {
 
 		/* MANAGE Bookeeping */
 		$ref = $client_invoice->ref . ' ' . $supplier_invoice->ref;
-		$bk_1 = createBookKeeping($supplier_invoice, $client_invoice, $account_supplier, $thirdparty_supplier, (float) $amount, $ref, $link_id, $JOURNAL_CODE);
-		$bk_2 = createBookKeeping($client_invoice, $supplier_invoice, $account_client, $thirdparty_customer, - (float) $amount, $ref, $link_id, $JOURNAL_CODE);
+		$bk_1 = createBookKeeping($client_invoice->date, $supplier_invoice, $client_invoice, $account_supplier, $thirdparty_supplier, (float) $amount, $ref, $link_id, $JOURNAL_CODE);
+		$bk_2 = createBookKeeping($client_invoice->date, $client_invoice, $supplier_invoice, $account_client, $thirdparty_customer, - (float) $amount, $ref, $link_id, $JOURNAL_CODE);
 		if ($bk_1 != 0 || $bk_2 != 0) {
 			setEventMessage($langs->trans("CPF_ErrorBookkeepingCreation"), 'errors');
 			/*var_dump(array("Bookkeeping Supplier", $bk_1));

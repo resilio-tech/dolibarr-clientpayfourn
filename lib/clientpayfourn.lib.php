@@ -73,7 +73,7 @@ function clientpayfournAdminPrepareHead()
  *
  * @return 0 if KO, int > 0 (id of inserted object) if inserted successfully
  */
-function createLink($facture_id, $supplier_invoice_id)
+function createLink($date, $facture_id, $supplier_invoice_id)
 {
 	global $db, $now, $amount, $supplier_invoice, $date;
 	
@@ -99,9 +99,9 @@ function createLink($facture_id, $supplier_invoice_id)
 	}
 }
 
-function createBookKeeping($invoice, $counter_part, $account, $thirdparty, $mt, $ref, $fk_doc, $journal_code)
+function createBookKeeping($date, $invoice, $counter_part, $account, $thirdparty, $mt, $ref, $fk_doc, $journal_code)
 {
-	global $db, $now, $langs, $user, $date, $conf, $action;
+	global $db, $now, $langs, $user, $conf, $action;
 	$accountingjournalstatic = new AccountingJournal($db);
 	$accountingjournalstatic->fetch($journal_code);
 

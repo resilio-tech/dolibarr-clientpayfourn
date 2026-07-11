@@ -246,11 +246,11 @@ if ($action && $action == 'validate') {
 	print '<th>'. $langs->trans("AccountingCredit"). '</th>';
 	print '</tr>';
 
-	function printCompta($account, $fac, $counter_part, $subledger, $mt)
+	function printCompta($date, $account, $fac, $counter_part, $subledger, $mt)
 	{
-		global $date, $db, $langs;
+		global $db, $langs;
 		print '<tr>';
-		print '<td>' . date_format(date_create($date), 'Y-m-d') . '</td>';
+		print '<td>' . date('Y-m-d', $date) . '</td>';
 		print '<td> '. $fac->getNomUrl(1) . ' </td>';
 		print '<td>' . $account->ref . '</td>';
 		print '<td>' . $subledger . '</td>';
@@ -259,8 +259,11 @@ if ($action && $action == 'validate') {
 		print '<td>' . (($mt < 0) ? -$mt . "" : 0) . '</td>';
 		print '</tr>';
 	}
-	printCompta($account_supplier, $client_invoice, $supplier_invoice, $thirdparty_customer->code_compta, (float) $amount);
-	printCompta($account_client, $supplier_invoice, $client_invoice, $thirdparty_supplier->code_compta_fournisseur, - (float)$amount);
+	
+	// $obj = new Facture($db);
+	// $obj->fetch($client_invoice);
+	printCompta($client_invoice->date, $account_client, $client_invoice, $supplier_invoice, $thirdparty_customer->code_compta, (float) $amount);
+	printCompta($client_invoice->date, $account_supplier, $supplier_invoice, $client_invoice, $thirdparty_supplier->code_compta_fournisseur, - (float)$amount);
 
 	print '</table>';
 

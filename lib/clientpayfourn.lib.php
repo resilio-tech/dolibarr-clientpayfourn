@@ -78,7 +78,7 @@ function createLink($date, $facture_id, $supplier_invoice_id)
 	global $db, $now, $amount, $supplier_invoice;
 	
 	$sql = "INSERT INTO " . MAIN_DB_PREFIX . "clientpayfourn_linkclientpayfourn (fk_facture_client, fk_facture_fourn, datec)";
-	$sql .= " VALUES (" . (int)$facture_id . ", " . (int)$supplier_invoice_id . ", '".date_format(date_create($date), 'Y-m-d')."')";
+	$sql .= " VALUES (" . (int)$facture_id . ", " . (int)$supplier_invoice_id . ", '".date('Y-m-d', $date)."')";
 	$resql = $db->query($sql);
 
 	if ($resql) {
@@ -106,8 +106,8 @@ function createBookKeeping($date, $invoice, $counter_part, $account, $thirdparty
 	$accountingjournalstatic->fetch($journal_code);
 
 	$bookkeeping = new BookKeeping($db);
-	$bookkeeping->doc_date = date_create($date)->getTimestamp();
-	$bookkeeping->date_lim_reglement = date_create($date)->getTimestamp();
+	$bookkeeping->doc_date = $date;
+	$bookkeeping->date_lim_reglement = $date;
 	$bookkeeping->doc_ref = $ref;
 	$bookkeeping->date_creation = $now;
 	$bookkeeping->doc_type = 'special_clientpayfourn';//'customer_invoice';
@@ -121,7 +121,7 @@ function createBookKeeping($date, $invoice, $counter_part, $account, $thirdparty
 	$bookkeeping->numero_compte = $account->ref;
 	$bookkeeping->label_compte = $account->label;
 
-	$bookkeeping->label_operation = $langs->trans("DebtCompensation") . ' - ' . $counter_part->ref ;
+	$bookkeeping->label_operation = $langs->trans("DebtCompensation") . ' - ' . $invoice->ref . ' - ' . $counter_part->ref ;
 	$bookkeeping->montant = $mt;
 	$bookkeeping->sens = ($mt >= 0) ? 'D' : 'C';
 	$bookkeeping->debit = ($mt >= 0) ? $mt : 0;

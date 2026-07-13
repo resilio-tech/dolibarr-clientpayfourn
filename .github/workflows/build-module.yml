@@ -16,6 +16,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -83,5 +85,30 @@ jobs:
         with:
           files: module_clientpayfourn-${{ steps.version.outputs.version }}.zip
           generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit version update
+        if: github.event_name == 'release'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin main:refs/remotes/origin/main
+          git checkout -B main origin/main
+
+          CURRENT_VERSION=$(grep -oP "\\\$this->version\s*=\s*'\K[^']+" core/modules/modClientPayFourn.class.php)
+          if [ "$VERSION" = "$CURRENT_VERSION" ]; then
+            echo "Version already up to date ($VERSION), nothing to commit"
+            exit 0
+          fi
+
+          sed -i "s/\$this->version = '[^']*'/\$this->version = '$VERSION'/" core/modules/modClientPayFourn.class.php
+
+          git add core/modules/modClientPayFourn.class.php
+          git commit -m "chore: bump version to $VERSION"
+          git push origin HEAD:main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

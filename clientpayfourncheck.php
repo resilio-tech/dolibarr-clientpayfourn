@@ -59,6 +59,9 @@ if (!$res) {
 // Load translation files required by the page
 $langs->loadLangs(array("clientpayfourn@clientpayfourn"));
 
+// Same permission as the core "Saisir règlement" (enter payment) button on the customer invoice card
+$usercanissuepayment = $user->hasRight('facture', 'paiement');
+
 $action = GETPOST('action', 'aZ09');
 $clientid = GETPOST('clientid', 'int');
 $fournid = GETPOST('fournid', 'int');
@@ -137,4 +140,9 @@ if ($n == 0) {
 print '</table>';
 
 print '</div>';
+
+// Expose the payment permission to the JS so the direct-payment button is only rendered
+// for users allowed to enter a payment (same right as the core "Saisir règlement" button).
+print '<span id="clientpayfourn-canpay" data-canpay="'.($usercanissuepayment ? 1 : 0).'"></span>';
+
 $db->close();

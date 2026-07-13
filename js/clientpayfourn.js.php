@@ -98,24 +98,7 @@ $paydirectfourn = $langs->trans("ClientPayFournButton");
 /* Javascript library of module ClientPayFourn */
 
 $(document).ready(function () {
-	// if we aren't on the Tier page, don't do anything
-	if (window.location.href.indexOf("/compta/facture/card.php") === -1) {
-		return;
-	}
-	const id = window.location.href.split("id=")[1].split("&")[0];
-	// if there are a button with "Valider" inside
-	const disabled = $(".badge.badge-status1.badge-status").length <= 0;
-
-	if (disabled) return;
-
-	const last = $(".tabsAction").first();
-
-	last.prepend(
-		"<a href='/custom/clientpayfourn/clientpayfournindex.php?id=" + id + "' class='butAction'><?= $paydirectfourn ?></a>"
-	);
-});
-
-$(document).ready(function () {
+	// if we aren't on the customer invoice card, don't do anything
 	if (window.location.href.indexOf("/compta/facture/card.php") === -1) {
 		return;
 	}
@@ -123,6 +106,17 @@ $(document).ready(function () {
 
 	$.get("/custom/clientpayfourn/clientpayfourncheck.php?clientid=" + id, function (data) {
 		$(".fichehalfright").last().append(data);
+
+		// Only show the direct payment button to users allowed to enter a payment
+		// (same right as the core "Saisir règlement" button) and when the invoice is validated.
+		const canpay = $("#clientpayfourn-canpay").data("canpay") == 1;
+		const validated = $(".badge.badge-status1.badge-status").length > 0;
+
+		if (canpay && validated) {
+			$(".tabsAction").first().prepend(
+				"<a href='/custom/clientpayfourn/clientpayfournindex.php?id=" + id + "' class='butAction'><?= $paydirectfourn ?></a>"
+			);
+		}
 	});
 });
 

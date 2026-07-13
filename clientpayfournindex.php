@@ -68,6 +68,11 @@ global $db, $user, $conf, $langs;
 // Load translation files required by the page
 $langs->loadLangs(array("clientpayfourn@clientpayfourn"));
 
+// Security check - same permission as the core "Saisir règlement" (enter payment) button
+if (!$user->hasRight('facture', 'paiement')) {
+	accessforbidden();
+}
+
 $action = GETPOST('action', 'aZ09');
 $facture_id = GETPOSTINT('id');
 $supplier_invoice_id = GETPOSTINT('supplier_invoice_id');

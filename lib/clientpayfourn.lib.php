@@ -142,7 +142,7 @@ function createDiscount($invoice, $invoice_supp, $thirdparty, $amount)
 	// Create the discount
 	$discount = new DiscountAbsolute($db);
 	$discount->description = $langs->trans("DebtCompensation").' - '.$invoice_supp->ref;
-	$discount->fk_soc = $thirdparty->id;
+	$discount->socid = $thirdparty->id;
 	// When generalizing, reactivate on good usecases $discount->fk_facture_source = $invoice->id;
 	$discount->fk_invoice_supplier_source = $invoice_supp->id;
 	$discount->fk_facture_source = $invoice->id;

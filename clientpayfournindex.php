@@ -209,16 +209,14 @@ if ($action && $action == 'save') {
 		$ref = $client_invoice->ref . ' ' . $supplier_invoice->ref;
 		$bk_1 = createBookKeeping($client_invoice->date, $supplier_invoice, $client_invoice, $account_supplier, $thirdparty_supplier, (float) $amount, $ref, $link_id, $JOURNAL_CODE);
 		$bk_2 = createBookKeeping($client_invoice->date, $client_invoice, $supplier_invoice, $account_client, $thirdparty_customer, - (float) $amount, $ref, $link_id, $JOURNAL_CODE);
-		if ($bk_1 != 0 || $bk_2 != 0) {
+		if ($bk_1 < 0 || $bk_2 < 0) {
 			setEventMessage($langs->trans("CPF_ErrorBookkeepingCreation"), 'errors');
 			/*var_dump(array("Bookkeeping Supplier", $bk_1));
 			var_dump(array("Bookkeeping Customer", $bk_2));
 			var_dump($db->lasterror());*/
-			$db->rollback();
 			$action = 'validate';
 		} else {
-			setEventMessage("CPF_BookkeepingCreated", 'mesgs');
-			$db->commit();
+			setEventMessage($langs->trans("CPF_BookkeepingCreated"), 'mesgs');
 			header("Location: ".dol_buildpath('/fourn/facture/card.php', 1)."?facid=" . $supplier_invoice_id);
 		}
 		

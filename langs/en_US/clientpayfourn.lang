@@ -77,3 +77,4 @@ CPF_PaymentRecorded = Payment recorded
 
 CPF_ErrorBookkeepingCreation = Error while creating bookkeepting entries
 CPF_BookkeepingCreated = Bookkeepting entries created
+CPF_CompensatedWith = compensated with

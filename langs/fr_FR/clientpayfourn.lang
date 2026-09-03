@@ -31,6 +31,7 @@ ClientPayFournSetupPage = Page de configuration - Module Compensation de créanc
 CLIENTPAYFOURN_CLIENT_ACCOUNTING = Compte Client
 CLIENTPAYFOURN_FOURN_ACCOUNTING = Compte Fournisseur
 CLIENTPAYFOURN_JOURNAL = Journal comptable pour les écritures
+CLIENTPAYFOURN_PAYMENT_MODE = Mode de règlement utilisé pour le paiement compensatoire sur la facture fournisseur
 
 #
 # About page
@@ -73,6 +74,7 @@ CPF_AntiDuplicateCheckFailed = Controle anti-duplication échoué
 
 CPF_DiscountCreationFailed = Erreur lors de la création de la remise compensatoire, paiement non enregistré
 CPF_DiscountCreated = Remise compensatoire enregistrée
+CPF_SupplierPaymentFailed = Erreur lors de l'enregistrement du paiement sur la facture fournisseur
 CPF_PaymentRecorded = Paiement enregistré
 
 CPF_ErrorBookkeepingCreation = Erreur lors de la création des écritures comptables

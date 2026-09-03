@@ -126,7 +126,8 @@ $account_supplier->fetch(empty($accounting_fourn) ? getDolGlobalString('CLIENTPA
 $account_client = new AccountingAccount($db);
 $account_client->fetch(empty($accounting_client) ? getDolGlobalString('CLIENTPAYFOURN_CLIENT_ACCOUNTING') : $accounting_client);
 $JOURNAL_CODE = getDolGlobalString('CLIENTPAYFOURN_JOURNAL');
-if (empty($JOURNAL_CODE)) {
+$PAYMENT_MODE = getDolGlobalInt('CLIENTPAYFOURN_PAYMENT_MODE');
+if (empty($JOURNAL_CODE) || empty($PAYMENT_MODE)) {
 	setEventMessage($langs->trans("CPF_Misconfigured"), 'errors');
 	header("Location: ".dol_buildpath('/custom/clientpayfourn/admin/setup.php', 1));
 	exit;
@@ -187,10 +188,13 @@ if ($action && $action == 'save') {
 			}
 		}
 
-		// Mark the supplier invoice as paid
-		if (!$error && $supplier_invoice->setPaid($user) < 0) {
-			$error++;
-			setEventMessages($supplier_invoice->error, $supplier_invoice->errors, 'errors');
+		// Record the compensation on the supplier invoice, which closes it only once fully covered
+		if (!$error) {
+			$payment_id = createSupplierPayment($client_invoice->date, $supplier_invoice, $thirdparty_supplier, $amount, $PAYMENT_MODE);
+			if ($payment_id <= 0) {
+				$error++;
+				setEventMessage($langs->trans("CPF_SupplierPaymentFailed"), 'errors');
+			}
 		}
 
 		// Use the credit to reduce remain to pay

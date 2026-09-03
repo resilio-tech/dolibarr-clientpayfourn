@@ -31,6 +31,7 @@ ClientPayFournSetupPage = Debt Compensation Module - Setup page
 CLIENTPAYFOURN_CLIENT_ACCOUNTING = Customer Account
 CLIENTPAYFOURN_FOURN_ACCOUNTING = Supplier Account
 CLIENTPAYFOURN_JOURNAL = Accounting journal for compensation bookkeeping entries
+CLIENTPAYFOURN_PAYMENT_MODE = Payment type used for the compensation payment on the supplier invoice
 
 #
 # About page
@@ -73,6 +74,7 @@ CPF_AntiDuplicateCheckFailed = Anti-duplicate check failed
 
 CPF_DiscountCreationFailed = Discount failed to be created, payment not recorded
 CPF_DiscountCreated = Discount created
+CPF_SupplierPaymentFailed = Payment failed to be recorded on the supplier invoice
 CPF_PaymentRecorded = Payment recorded
 
 CPF_ErrorBookkeepingCreation = Error while creating bookkeepting entries

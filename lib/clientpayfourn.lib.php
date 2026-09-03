@@ -75,28 +75,15 @@ function clientpayfournAdminPrepareHead()
  */
 function createLink($date, $facture_id, $supplier_invoice_id)
 {
-	global $db, $now, $amount, $supplier_invoice;
-	
+	global $db;
+
 	$sql = "INSERT INTO " . MAIN_DB_PREFIX . "clientpayfourn_linkclientpayfourn (fk_facture_client, fk_facture_fourn, datec)";
 	$sql .= " VALUES (" . (int)$facture_id . ", " . (int)$supplier_invoice_id . ", '".date('Y-m-d', $date)."')";
-	$resql = $db->query($sql);
-
-	if ($resql) {
-		setEventMessage("Link created", 'mesgs');
-		$db->commit();
-		// Get rowid to return it
-		$sql = "SELECT fk_facture_client, fk_facture_fourn FROM " . MAIN_DB_PREFIX . "clientpayfourn_linkclientpayfourn";
-		$sql .= " WHERE fk_facture_client = " . (int)$facture_id . " AND fk_facture_fourn = " . (int)$supplier_invoice_id;
-		$resql = $db->query($sql);
-		$id_inserted = $db->fetch_object($resql);
-		
-		return $id_inserted;
-	
-	} else {
-		$db->rollback();
-	
+	if (!$db->query($sql)) {
 		return 0;
 	}
+
+	return (int) $db->last_insert_id(MAIN_DB_PREFIX . "clientpayfourn_linkclientpayfourn");
 }
 
 function createBookKeeping($date, $invoice, $counter_part, $account, $thirdparty, $mt, $ref, $fk_doc, $journal_code)

@@ -127,8 +127,9 @@ $account_client = new AccountingAccount($db);
 $account_client->fetch(empty($accounting_client) ? getDolGlobalString('CLIENTPAYFOURN_CLIENT_ACCOUNTING') : $accounting_client);
 $JOURNAL_CODE = getDolGlobalString('CLIENTPAYFOURN_JOURNAL');
 if (empty($JOURNAL_CODE)) {
-	setEventMessage("CPF_Misconfigured", 'errors'); 
+	setEventMessage($langs->trans("CPF_Misconfigured"), 'errors');
 	header("Location: ".dol_buildpath('/custom/clientpayfourn/admin/setup.php', 1));
+	exit;
 }
 
 if ($action && $action == 'save') {
@@ -145,81 +146,92 @@ if ($action && $action == 'save') {
 		if (!$client_soc_id) {
 			setEventMessage($langs->trans("CPF_CustomerUndefined"), 'errors');
 		}
-	} else if ($facture_id && $supplier_invoice_id) {
+	} else {
+		$error = 0;
+		$link_id = 0;
+		$id_discount = 0;
+
+		$db->begin();
+
 		/* MANAGE LINK */
-		$sql = "SELECT fk_facture_client, fk_facture_fourn FROM " . MAIN_DB_PREFIX . "clientpayfourn_linkclientpayfourn";
+		$sql = "SELECT rowid FROM " . MAIN_DB_PREFIX . "clientpayfourn_linkclientpayfourn";
 		$sql .= " WHERE fk_facture_client = " . (int)$facture_id . " AND fk_facture_fourn = " . (int)$supplier_invoice_id;
 		$resql = $db->query($sql);
-		if ($resql) {
-			if ($db->num_rows($resql) > 0) {
-				setEventMessage($langs->trans("CPF_ExistingLink"), 'errors');
-				header("Location: ".dol_buildpath('/compta/facture/card.php', 1)."?facid=" . $facture_id);
-			} else {
-				$link_id = createLink($client_invoice->date, $facture_id, $supplier_invoice_id);
-				if ($link_id == 0) {
-					setEventMessage($langs->trans("CPF_LinkCreationError"), 'errors');
-					header("Location: ".dol_buildpath('/fourn/facture/card.php', 1)."?facid=" . $supplier_invoice_id);
-				}
-			}
+		if (!$resql) {
+			$error++;
+			setEventMessage($langs->trans("CPF_AntiDuplicateCheckFailed"), 'errors');
 		} else {
-			setEventMessage($langs->trans("CPF_AntiDuplicateCheckFailed"), 'warning');
-			// var_dump($db->lasterror());
+			$already_linked = ($db->num_rows($resql) > 0);
+			$db->free($resql);
+			if ($already_linked) {
+				$error++;
+				setEventMessage($langs->trans("CPF_ExistingLink"), 'errors');
+			}
+		}
+
+		if (!$error) {
+			$link_id = createLink($client_invoice->date, $facture_id, $supplier_invoice_id);
+			if ($link_id <= 0) {
+				$error++;
+				setEventMessage($langs->trans("CPF_LinkCreationError"), 'errors');
+			}
 		}
 
 		/* Manage Payments */
 		// Create discount from the supplier invoice
-		$id_discount = createDiscount($client_invoice, $supplier_invoice, $thirdparty_customer, $amount);
-		if ($id_discount < 0) {
+		if (!$error) {
+			$id_discount = createDiscount($client_invoice, $supplier_invoice, $thirdparty_customer, $amount);
+			if ($id_discount <= 0) {
+				$error++;
+				setEventMessage($langs->trans("CPF_DiscountCreationFailed"), 'errors');
+			}
+		}
+
+		// Mark the supplier invoice as paid
+		if (!$error && $supplier_invoice->setPaid($user) < 0) {
+			$error++;
+			setEventMessages($supplier_invoice->error, $supplier_invoice->errors, 'errors');
+		}
+
+		// Use the credit to reduce remain to pay
+		if (!$error) {
+			$discount = new DiscountAbsolute($db);
+			if ($discount->fetch($id_discount) <= 0) {
+				$error++;
+				setEventMessages($discount->error, $discount->errors, 'errors');
+			} elseif ($discount->link_to_invoice(0, $client_invoice->id) < 0) {
+				$error++;
+				setEventMessages($discount->error, $discount->errors, 'errors');
+			}
+		}
+
+		if (!$error && $client_invoice->getRemainToPay(0) == 0 && $client_invoice->setPaid($user) < 0) {
+			$error++;
+			setEventMessages($client_invoice->error, $client_invoice->errors, 'errors');
+		}
+
+		/* MANAGE Bookeeping */
+		if (!$error) {
+			$ref = $client_invoice->ref . ' ' . $supplier_invoice->ref;
+			$bk_1 = createBookKeeping($client_invoice->date, $supplier_invoice, $client_invoice, $account_supplier, $thirdparty_supplier, (float) $amount, $ref, $link_id, $JOURNAL_CODE);
+			$bk_2 = createBookKeeping($client_invoice->date, $client_invoice, $supplier_invoice, $account_client, $thirdparty_customer, - (float) $amount, $ref, $link_id, $JOURNAL_CODE);
+			if ($bk_1 < 0 || $bk_2 < 0) {
+				$error++;
+				setEventMessage($langs->trans("CPF_ErrorBookkeepingCreation"), 'errors');
+			}
+		}
+
+		if ($error) {
 			$db->rollback();
-			setEventMessage($langs->trans("CPF_DiscountCreationFailed"), 'errors');
-			/* var_dump(
-				array(
-					'sql' => $db->lasterror(), 
-					'discount' => $discount,
-				)
-			);*/
 			$action = 'validate';
 		} else {
 			$db->commit();
 			setEventMessage($langs->trans("CPF_DiscountCreated"), 'mesgs');
-		}
-
-		// Mark the supplier invoice as paid
-		$supplier_invoice->setPaid($user);
-
-		// Use the credit to reduce remain to pay
-		$discount = new DiscountAbsolute($db);
-		$discount->fetch($id_discount);
-		$result = $discount->link_to_invoice(0, $client_invoice->id);
-
-		if ($result < 0) {
-			setEventMessages($discount->error, $discount->errors, 'errors');
-			$db->rollback();
-		} else {
-			$db->commit();
 			setEventMessage($langs->trans("CPF_PaymentRecorded"), 'mesgs');
-		}
-
-		$newremaintopay = $client_invoice->getRemainToPay(0);
-		if ($newremaintopay == 0) {
-			$client_invoice->setPaid($user);
-		}
-
-		/* MANAGE Bookeeping */
-		$ref = $client_invoice->ref . ' ' . $supplier_invoice->ref;
-		$bk_1 = createBookKeeping($client_invoice->date, $supplier_invoice, $client_invoice, $account_supplier, $thirdparty_supplier, (float) $amount, $ref, $link_id, $JOURNAL_CODE);
-		$bk_2 = createBookKeeping($client_invoice->date, $client_invoice, $supplier_invoice, $account_client, $thirdparty_customer, - (float) $amount, $ref, $link_id, $JOURNAL_CODE);
-		if ($bk_1 < 0 || $bk_2 < 0) {
-			setEventMessage($langs->trans("CPF_ErrorBookkeepingCreation"), 'errors');
-			/*var_dump(array("Bookkeeping Supplier", $bk_1));
-			var_dump(array("Bookkeeping Customer", $bk_2));
-			var_dump($db->lasterror());*/
-			$action = 'validate';
-		} else {
 			setEventMessage($langs->trans("CPF_BookkeepingCreated"), 'mesgs');
 			header("Location: ".dol_buildpath('/fourn/facture/card.php', 1)."?facid=" . $supplier_invoice_id);
+			exit;
 		}
-		
 	}
 }
 

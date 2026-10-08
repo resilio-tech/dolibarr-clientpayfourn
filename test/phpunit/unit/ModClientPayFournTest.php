@@ -103,7 +103,7 @@ class ModClientPayFournTestable
 		'theme' => 0,
 		'css' => array(),
 		'js' => array('/clientpayfourn/js/clientpayfourn.js.php'),
-		'hooks' => array(),
+		'hooks' => array('bookkeepinglist'),
 		'moduleforexternal' => 0,
 	);
 
@@ -408,6 +408,12 @@ class ModClientPayFournTest extends TestCase
 	public function testCssDisabled()
 	{
 		$this->assertFalse($this->module->isModulePartEnabled('css'));
+	}
+
+	public function testHooksEnabled()
+	{
+		$this->assertTrue($this->module->isModulePartEnabled('hooks'));
+		$this->assertContains('bookkeepinglist', $this->module->module_parts['hooks']);
 	}
 
 	public function testUnknownPartDisabled()

@@ -67,6 +67,9 @@ CPF_SupplierUndefined = Thirdparty Supplier undefined
 CPF_CustomerUndefined = Thirdparty Customer undefined
 CPF_CustomerInvoiceUndefined = Undefined Customer Invoice
 CPF_SupplierInvoiceUndefined = Undefined Supplier Invoice
+CPF_CustomerInvoiceNotPayable = The customer invoice is not validated or is already closed
+CPF_SupplierInvoiceNotPayable = The supplier invoice is not validated or is already closed
+CPF_InvalidAmount = Amount must be greater than 0 and cannot exceed the remaining amount to pay (%s)
 
 CPF_ExistingLink = Existing link, process stopped
 CPF_LinkCreationError = Erreur creating Debt Compensation link

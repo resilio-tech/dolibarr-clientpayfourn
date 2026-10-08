@@ -67,6 +67,9 @@ CPF_SupplierUndefined = Société fournisseur non renseignée
 CPF_CustomerUndefined = Société client non renseignée
 CPF_CustomerInvoiceUndefined = Facture client non renseignée
 CPF_SupplierInvoiceUndefined = Facture fournisseur non renseignée
+CPF_CustomerInvoiceNotPayable = La facture client n'est pas validée ou est déjà clôturée
+CPF_SupplierInvoiceNotPayable = La facture fournisseur n'est pas validée ou est déjà clôturée
+CPF_InvalidAmount = Le montant doit être supérieur à 0 et ne peut pas dépasser le reste à payer (%s)
 
 CPF_ExistingLink = Lien existant, processus avorté
 CPF_LinkCreationError = Erreur lors de la création du lien

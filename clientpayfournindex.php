@@ -68,8 +68,13 @@ global $db, $user, $conf, $langs;
 // Load translation files required by the page
 $langs->loadLangs(array("clientpayfourn@clientpayfourn"));
 
-// Security check - same permission as the core "Saisir règlement" (enter payment) button
-if (!$user->hasRight('facture', 'paiement')) {
+// Security check
+if (!isModEnabled('invoice') || !isModEnabled('supplier_invoice') || !isModEnabled('accounting')) {
+	accessforbidden();
+}
+if (!$user->hasRight('facture', 'paiement')
+	|| !($user->hasRight('fournisseur', 'facture', 'creer') || $user->hasRight('supplier_invoice', 'creer'))
+	|| !$user->hasRight('accounting', 'mouvements', 'creer')) {
 	accessforbidden();
 }
 
@@ -78,7 +83,7 @@ $facture_id = GETPOSTINT('id');
 $supplier_invoice_id = GETPOSTINT('supplier_invoice_id');
 $accounting_fourn = GETPOSTINT('accounting_fourn');
 $accounting_client = GETPOSTINT('accounting_client');
-$amount = GETPOSTFLOAT('amount');
+$amount = GETPOSTFLOAT('amount', 'MT');
 $date = GETPOSTINT('date');
 $date_day = GETPOSTINT('dateday');
 $date_month = GETPOSTINT('datemonth');
@@ -151,6 +156,20 @@ if ($action && $action == 'save') {
 		$error = 0;
 		$link_id = 0;
 		$id_discount = 0;
+
+		if ($client_invoice->status != Facture::STATUS_VALIDATED) {
+			$error++;
+			setEventMessage($langs->trans("CPF_CustomerInvoiceNotPayable"), 'errors');
+		}
+		if ($supplier_invoice->status != FactureFournisseur::STATUS_VALIDATED) {
+			$error++;
+			setEventMessage($langs->trans("CPF_SupplierInvoiceNotPayable"), 'errors');
+		}
+		$max_amount = min((float) $client_invoice->getRemainToPay(0), (float) $supplier_invoice->getRemainToPay(0));
+		if ($amount <= 0 || $amount > $max_amount) {
+			$error++;
+			setEventMessage($langs->trans("CPF_InvalidAmount", price($max_amount, 0, $langs, 1, -1, -1, $conf->currency)), 'errors');
+		}
 
 		$db->begin();
 
@@ -333,7 +352,7 @@ if ($action && $action == 'validate') {
 		$db->free($resql);
 	}
 
-	print $form->selectarray('supplier_invoice_id', $list_select, $facture_id, 1);
+	print $form->selectarray('supplier_invoice_id', $list_select, $supplier_invoice_id, 1);
 
 	print "<script>
 		// Pass the PHP JSON to a JavaScript variable

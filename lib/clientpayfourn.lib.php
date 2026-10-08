@@ -121,6 +121,23 @@ function createBookKeeping($date, $invoice, $counter_part, $account, $thirdparty
 	return $bookkeeping->create($user);
 }
 
+function createSupplierPayment($date, $invoice_supp, $thirdparty, $amount, $payment_mode_id)
+{
+	global $db, $user, $langs;
+	require_once DOL_DOCUMENT_ROOT.'/fourn/class/paiementfourn.class.php';
+
+	$payment = new PaiementFourn($db);
+	$payment->datepaye = $date;
+	$payment->amounts = array($invoice_supp->id => (float) $amount);
+	$payment->multicurrency_code = array($invoice_supp->id => $invoice_supp->multicurrency_code);
+	$payment->multicurrency_tx = array($invoice_supp->id => $invoice_supp->multicurrency_tx);
+	$payment->paiementid = $payment_mode_id;
+	$payment->num_payment = '';
+	$payment->note_private = $langs->trans("DebtCompensation").' - '.$invoice_supp->ref;
+
+	return $payment->create($user, 1, $thirdparty);
+}
+
 function createDiscount($invoice, $invoice_supp, $thirdparty, $amount) 
 {
 	global $db, $user, $langs;

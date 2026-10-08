@@ -59,7 +59,7 @@ require_once '../lib/clientpayfourn.lib.php';
 //require_once "../class/myclass.class.php";
 
 // Translations
-$langs->loadLangs(array("admin", "clientpayfourn@clientpayfourn"));
+$langs->loadLangs(array("admin", "bills", "clientpayfourn@clientpayfourn"));
 
 // Initialize technical object to manage hooks of page. Note that conf->hooks_modules contains array of hook context
 $hookmanager->initHooks(array('clientpayfournsetup', 'globalsetup'));
@@ -133,6 +133,21 @@ if (!$resql) {
 	}
 }
 
+$list_payment = array();
+$sql = "SELECT id, code, libelle";
+$sql .= " FROM ".$db->prefix()."c_paiement";
+$sql .= " WHERE active = 1 AND entity IN (".getEntity('c_paiement').")";
+$sql .= " ORDER BY position";
+$resql = $db->query($sql);
+if (!$resql) {
+	$this->error = "Error ".$db->lasterror();
+} else {
+	while ($obj = $db->fetch_object($resql)) {
+		$label = $langs->trans("PaymentType".$obj->code) != "PaymentType".$obj->code ? $langs->trans("PaymentType".$obj->code) : $obj->libelle;
+		$list_payment[$obj->id] = $label;
+	}
+}
+
 // Setup conf for selection of an URL
 $item = $formSetup->newItem('CLIENTPAYFOURN_CLIENT_ACCOUNTING');
 $item->setAsSelect($list_accounting);
@@ -140,6 +155,8 @@ $item = $formSetup->newItem('CLIENTPAYFOURN_FOURN_ACCOUNTING');
 $item->setAsSelect($list_accounting);
 $item = $formSetup->newItem('CLIENTPAYFOURN_JOURNAL');
 $item->setAsSelect($list_journal);
+$item = $formSetup->newItem('CLIENTPAYFOURN_PAYMENT_MODE');
+$item->setAsSelect($list_payment);
 
 
 $setupnotempty += count($formSetup->items);
